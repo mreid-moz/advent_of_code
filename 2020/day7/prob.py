@@ -76,3 +76,14 @@ while last_size != current_size:
   current_size = len(current_set)
 
 logging.info("Part 1: {} bags can contain {}".format(current_size, target_bag))
+
+contained_count = 0
+
+
+def deep_count(bag_count, bag_type):
+  total = 0
+  for b, c in bags[bag_type].contains.items():
+    total += deep_count(c, b)
+  return bag_count + bag_count * total
+
+logging.info("Part 2: One {} bag contains {} other bags".format(target_bag, deep_count(1, target_bag) - 1))
