@@ -41,22 +41,12 @@ class Bag:
         self.contains[next_name] = int(t)
         components.pop(0)
 
-
 bags = {}
 target_bag = "shiny gold"
 
 for line in my_input:
   bag = Bag(line)
   bags[bag.name] = bag
-
-def process(bag, bags):
-  #logging.debug("processing {} ({})".format(bag.name, bag.spec))
-  if len(bag.contains) == 0:
-    return
-  for bag_name in bag.contains:
-    b = bags[bag_name]
-    b.contained_by.add(bag.name)
-    process(b, bags)
 
 for k, v in bags.items():
   for bag_name in v.contains:
@@ -78,7 +68,6 @@ while last_size != current_size:
 logging.info("Part 1: {} bags can contain {}".format(current_size, target_bag))
 
 contained_count = 0
-
 
 def deep_count(bag_count, bag_type):
   total = 0
