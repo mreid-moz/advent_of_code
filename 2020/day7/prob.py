@@ -86,4 +86,6 @@ def deep_count(bag_count, bag_type):
     total += deep_count(c, b)
   return bag_count + bag_count * total
 
-logging.info("Part 2: One {} bag contains {} other bags".format(target_bag, deep_count(1, target_bag) - 1))
+# subtract one because this counts the outer bag itself.
+num_bags = deep_count(1, target_bag) - 1
+logging.info("Part 2: One {} bag contains {} other bags".format(target_bag, num_bags))
