@@ -2,7 +2,7 @@ import logging
 import re
 import sys
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 input_file = 'input'
 if len(sys.argv) >= 2:
@@ -21,11 +21,9 @@ def check(n, window):
         return True
   return False
 
-window = list()
-for i in range(preamble_length):
-  window.append(int(my_input.pop(0)))
+window = [int(s) for s in my_input[0:preamble_length]]
 
-for s in my_input:
+for s in my_input[preamble_length:]:
   n = int(s)
   if check(n, window):
     logging.debug("{} is valid using window [{}]".format(s, ", ".join([str(w) for w in window])))
@@ -36,4 +34,16 @@ for s in my_input:
   window.pop(0)
   window.append(n)
 
-for i in range()
+for i in range(len(my_input)):
+  total = int(my_input[i])
+  j = i + 1
+  logging.debug("looking for a contiguous blob starting at {} ({})".format(i, total))
+  while total < invalid_input and j < len(my_input):
+    total += int(my_input[j])
+    logging.debug("item {} brings total to {}".format(j, total))
+    j += 1
+  if total == invalid_input:
+    # add lowest and highest.
+    items = sorted([int(s) for s in my_input[i:j]])
+    logging.info("Part 2: found it, {} + {} = {}".format(items[0], items[-1], items[0] + items[-1]))
+    break
