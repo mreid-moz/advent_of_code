@@ -1,5 +1,5 @@
 import logging
-from nav import Nav
+from nav import Nav, WaypointNav
 import sys
 
 logging.basicConfig(level=logging.INFO)
@@ -11,7 +11,10 @@ with open(input_file) as fin:
   my_input = [l.strip() for l in fin.readlines()]
 
 n = Nav()
+wn = WaypointNav()
 for line in my_input:
   n.move(line)
+  wn.move(line)
 
 logging.info("Part 1: manhattan distance {}".format(n.manhattan()))
+logging.info("Part 2: manhattan distance {}".format(wn.manhattan()))
