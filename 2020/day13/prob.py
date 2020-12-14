@@ -57,21 +57,36 @@ for i, v in enumerate(buses):
 base = equations[0][1]
 equation_offset = 1
 m = 1
+m_step = 1
+last_match = base
+last_match_length = 1
 while True:
   c = base * m
   good = True
   if m % 1000000 == 0:
-    logging.debug("Checking multiple {} * {}".format(m, base))
+    logging.info("Checking multiple {} * {}. m_step is {}".format(m, base, m_step))
+  current_match_length = 0
   for offset, val in equations[equation_offset:]:
     if (c + offset) % val != 0:
       good = False
       break
-  if good:
-    logging.info("part 2: Timestamp was {}".format(base * m))
-    break
-  m += 1
+    else:
+      current_match_length += 1
+      if last_match is None:
+        last_match = c
+        last_match_length = current_match_length
+      #TODO: fix this trash
+      # elif current_match_length > last_match_length:
+      #  base = c - last_match
+      #  m = 2
+      #  logging.debug("Setting step size to {}".format(base))
+      #  last_match = c
+      #  last_match_length = current_match_length
+      logging.debug("Found a value {} ({} * {}) that is {} % {} and {} % {}".format(c, base, m, offset, val, c % base, base))
 
-# Equation 1: 17a + 0 = t
-# Equation 2: 13b + 2 = t
-# Equation 3: 19c + 3 = t
-# t = 3417
+      #if val > m_step:
+      #  m_step = val
+  if good:
+    logging.info("part 2: Timestamp was {}".format(c))
+    break
+  m += m_step
