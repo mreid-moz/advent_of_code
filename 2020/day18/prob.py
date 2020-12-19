@@ -2,7 +2,7 @@ import logging
 import re
 import sys
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 input_file = 'input'
 if len(sys.argv) >= 2:
@@ -113,31 +113,31 @@ def test2():
     assert(expected == actual)
 
 #test()
-#total = 0
-#for line in my_input:
-#  total += compute(0, '+', line)
-#logging.info("Part 1: sum of equation values: {}".format(total))
+total = 0
+for line in my_input:
+  total += compute(0, '+', line)
+logging.info("Part 1: sum of equation values: {}".format(total))
 
 def apply(left, op, right):
   if op == '+':
     return left + right
   return left * right
 
-# a + b * c
 def apply_op(pieces, op):
   if len(pieces) == 1:
     return pieces
-  remaining_pieces = []
-  left = pieces.pop(0)
-  while pieces:
-    cop = pieces.pop(0)
-    right = pieces.pop(0)
+  remaining_pieces = [pieces[0]]
+  for i in range(1, len(pieces) - 1, 2):
+    left = remaining_pieces.pop()
+    cop = pieces[i]
+    right = pieces[i+1]
     if cop == op:
       remaining_pieces.append(apply(left, op, right))
     else:
       remaining_pieces.append(left)
       remaining_pieces.append(cop)
       remaining_pieces.append(right)
+
   return remaining_pieces
 
 def compute_simple(equation):
@@ -149,10 +149,7 @@ def compute_simple(equation):
       pieces.append(int(piece))
   pieces = apply_op(pieces, '+')
   pieces = apply_op(pieces, '*')
-  if len(pieces) == 1:
-    return int(pieces[0])
-  else:
-    return pieces
+  return int(pieces[0])
 
 def is_simple(equation):
   return '(' not in equation
@@ -173,12 +170,11 @@ def compute2(equation):
     sub_eq = equation[last_opening_paren + 1:last_closing_paren]
     logging.debug("Simplifying {} by solving {} separately".format(equation, sub_eq))
     if is_simple(sub_eq):
-      equation = equation[:last_opening_paren] + compute_simple(sub_eq) + equation[last_closing_paren+1:]
+      equation = equation[:last_opening_paren] + str(compute_simple(sub_eq)) + equation[last_closing_paren+1:]
     else:
-      logging.debug("Sub eq was not simple :( {}".format(sub_eq))
+      logging.warn("Sub eq was not simple :( {}".format(sub_eq))
   logging.debug("equation is simple: {}".format(equation))
   return compute_simple(equation)
-
 
 test2()
 total = 0
