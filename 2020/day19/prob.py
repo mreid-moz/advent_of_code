@@ -2,7 +2,7 @@ import logging
 import re
 import sys
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 class DummyRule:
   def __init__(self, num):
@@ -41,10 +41,7 @@ class Rule:
     if self.match_target is not None:
       return message == self.match_target
 
-    #for component in self.components:
-    #  # if any component matches, we're good.
-
-    # TODO: components.
+    # TODO: implement the re stuff here instead.
     logging.debug("Match: {}".format(self))
     return message == self.match_target
 
@@ -102,7 +99,7 @@ def parse_rules(rule_lines):
 def rule_to_re(rule, r42=None, r31=None):
   be_weird = True # Set to False for part 1, True for part 2.
   if be_weird and rule.rule_num == '11':
-    special = '({}(({})({}))*{})'.format(r42, r42, r31, r31)
+    special = '({0}{1}|{0}{{2}}{1}{{2}}|{0}{{3}}{1}{{3}}|{0}{{4}}{1}{{4}}|{0}{{5}}{1}{{5}}|{0}{{6}}{1}{{6}})'.format(r42, r31)
     logging.debug("Special case for rule 11: {}".format(special))
     return special
   suffix = ''
@@ -120,7 +117,7 @@ def rule_to_re(rule, r42=None, r31=None):
 
   # named groups - it doesn't work because of repeated rule names.
   #XX final_re = '(?P<rule{}>'.format(rule.rule_num) + '|'.join(re_comps) + ')' + suffix
-  final_re = '((' + '|'.join(re_comps) + ')' + suffix + ')'
+  final_re = '(' + '|'.join(re_comps) + ')' + suffix
   if suffix == '+':
     logging.debug("Rule 8: {}".format(final_re))
   return final_re
@@ -157,43 +154,47 @@ r31 = rule_to_re(ready_rules['31'])
 r8 = rule_to_re(ready_rules['8'], r42, r31)
 r11 = rule_to_re(ready_rules['11'], r42, r31)
 r14 = rule_to_re(ready_rules['14'], r42, r31)
-logging.info("Rule 42: {} ({})".format(r42, ready_rules['42']))
-logging.info("Rule 31: {} ({})".format(r31, ready_rules['31']))
-logging.info("Rule 11: {} ({})".format(r11, ready_rules['11']))
-logging.info("Rule 14: {} ({})".format(r14, ready_rules['14']))
-logging.info("Rule  8: {} ({})".format(r8, ready_rules['8']))
+logging.debug("Rule 42: {} ({})".format(r42, ready_rules['42']))
+logging.debug("Rule 31: {} ({})".format(r31, ready_rules['31']))
+logging.debug("Rule 11: {} ({})".format(r11, ready_rules['11']))
+logging.debug("Rule 14: {} ({})".format(r14, ready_rules['14']))
+logging.debug("Rule  8: {} ({})".format(r8, ready_rules['8']))
 
 #rule_zero_re = '^' + rule_to_re(ready_rules['0'], r42, r31) + '$'
 rule_zero_re = rule_to_re(ready_rules['0'], r42, r31) + '$'
-logging.info("Rule 0: {}".format(rule_zero_re))
-#p = re.compile(rule_zero_re)
-p = re.compile('({})({})$'.format(r8, r11))
+logging.debug("Rule 0: {}".format(rule_zero_re))
+p = re.compile('^' + rule_zero_re)
+#p = re.compile('({})({})$'.format(r8, r11))
 
 def test():
   t = [
-    #'bbabbbbaabaabba',
-    #'babbbbaabbbbbabbbbbbaabaaabaaa',
+    'bbabbbbaabaabba',
+    'babbbbaabbbbbabbbbbbaabaaabaaa',
     'aaabbbbbbaaaabaababaabababbabaaabbababababaaa',
-    #'bbbbbbbaaaabbbbaaabbabaaa',
-    #'bbbababbbbaaaaaaaabbababaaababaabab',
-    #'ababaaaaaabaaab',
-    #'ababaaaaabbbaba',
-    #'baabbaaaabbaaaababbaababb',
-    #'abbbbabbbbaaaababbbbbbaaaababb',
-    #'aaaaabbaabaaaaababaa',
-    #'aaaabbaabbaaaaaaabbbabbbaaabbaabaaa',
-    #'aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba',
+    'bbbbbbbaaaabbbbaaabbabaaa',
+    'bbbababbbbaaaaaaaabbababaaababaabab',
+    'ababaaaaaabaaab',
+    'ababaaaaabbbaba',
+    'baabbaaaabbaaaababbaababb',
+    'abbbbabbbbaaaababbbbbbaaaababb',
+    'aaaaabbaabaaaaababaa',
+    'aaaabbaabbaaaaaaabbbabbbaaabbaabaaa',
+    'aabbbbbaabbbaaaaaabbbbbababaaaaabbaaabba',
   ]
 
   for m in t:
-    for i in range(1, 43):
-      if str(i) in ready_rules:
-        rule_re = rule_to_re(ready_rules[str(i)], r42, r31)
-        logging.info("Checking {} against rule {} which is {}".format(m, i, rule_re))
-        assert(re.match('.*' + rule_re, m))
-        logging.info("  match.")
+    #for i in range(1, 43):
+    #  if str(i) in ready_rules:
+    #    rule_re = rule_to_re(ready_rules[str(i)], r42, r31)
+    #    logging.info("Checking {} against rule {} which is {}".format(m, i, rule_re))
+    #    assert(re.match('.*' + rule_re, m))
+    #    logging.info("  match.")
+    logging.debug("Checking {} against rule 0 which is {}".format(m, rule_zero_re))
+    assert(re.match('.*' + rule_zero_re, m))
+    logging.debug("  match.")
 
-test()
+if input_file == 't2':
+  test()
 
 match_count = 0
 for message in messages:
