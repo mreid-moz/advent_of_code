@@ -7,6 +7,12 @@ from collections import defaultdict
 
 logging.basicConfig(level=logging.DEBUG)
 
+NORTH = 'n'
+EAST  = 'e'
+WEST  = 'w'
+SOUTH = 's'
+DIRECTIONS = [NORTH, EAST, WEST, SOUTH]
+
 input_file = 'input'
 if len(sys.argv) >= 2:
   input_file = sys.argv[1]
@@ -19,18 +25,251 @@ def reverse(s):
 class Puzzle:
   def __init__(self, size):
     self.size = size
-    self.empty_spaces = size
+    self.empty_spaces = size * size
     self.grid = []
     for i in range(size):
       self.grid.append([None] * size)
+
+  def print(self):
+    logging.debug("Puzzle state:")
+    for x in range(self.size):
+      spots = []
+      for spot in self.grid[x]:
+        if spot is None:
+          spots.append('____')
+        else:
+          spots.append(str(spot.id))
+      logging.debug(" ".join(spots))
 
   def force_tile(self, tile, x, y):
     if self.grid[x][y] is None:
       self.empty_spaces -= 1
     self.grid[x][y] = tile
 
-  def fit_tile(self, tile):
-    pass
+  def fit_tile(self, tile, relative_x, relative_y):
+    relative_tile = self.grid[relative_x][relative_y]
+    possible_directions = []
+    if relative_x - 1 >= 0 and self.grid[relative_x - 1][relative_y] is None:
+      possible_directions.append(WEST)
+    if relative_x + 1 < self.size and self.grid[relative_x + 1][relative_y] is None:
+      possible_directions.append(EAST)
+    if relative_y - 1 >= 0 and self.grid[relative_x][relative_y - 1] is None:
+      possible_directions.append(NORTH)
+    if relative_y + 1 < self.size and self.grid[relative_x][relative_y + 1] is None:
+      possible_directions.append(SOUTH)
+
+    if tile is None:
+      logging.error("tile is None")
+    if relative_tile is None:
+      logging.error("relative_tile is None")
+
+    new_tile_x = -1
+    new_tile_y = -1
+    for i_side in possible_directions:
+      logging.debug("Trying to put {} to the {} of {}".format(tile.id, i_side, relative_tile.id))
+      i_edge = relative_tile.edge(i_side)
+      for j_side in DIRECTIONS:
+        j_edge = tile.edge(j_side)
+        match = False
+        if i_edge == j_edge:
+          match = True
+          logging.debug('{} side of tile {} matches {} side of tile {}'.format(i_side, relative_tile.id, j_side, tile.id))
+          relative_tile.print()
+          tile.print()
+          if i_side == EAST:
+            new_tile_x = relative_x + 1
+            new_tile_y = relative_y
+            if j_side == NORTH:
+              #  xxa  abc
+              #  xxb  xxx
+              #  xxc  xxx
+              tile.rotate()
+              tile.flip_horizontal()
+            elif j_side == EAST:
+              #  xxa  xxa
+              #  xxb  xxb
+              #  xxc  xxc
+              tile.flip_horizontal()
+            elif j_side == SOUTH:
+              #  xxa  xxx
+              #  xxb  xxx
+              #  xxc  abc
+              tile.rotate()
+          elif i_side == WEST:
+            new_tile_x = relative_x - 1
+            new_tile_y = relative_y
+            if j_side == WEST:
+              #  axx  axx
+              #  bxx  bxx
+              #  cxx  cxx
+              tile.flip_horizontal()
+            elif j_side == NORTH:
+              #  axx  abc
+              #  bxx  xxx
+              #  cxx  xxx
+              tile.rotate()
+            elif j_side == SOUTH:
+              #  axx  xxx
+              #  bxx  xxx
+              #  cxx  abc
+              tile.rotate()
+              tile.flip_horizontal()
+          elif i_side == NORTH:
+            new_tile_x = relative_x
+            new_tile_y = relative_y - 1
+            if j_side == WEST:
+              #  abc  axx
+              #  xxx  bxx
+              #  xxx  cxx
+              tile.rotate()
+              tile.flip_vertical()
+            elif j_side == NORTH:
+              #  abc  abc
+              #  xxx  xxx
+              #  xxx  xxx
+              tile.flip_vertical()
+            elif j_side == EAST:
+              #  abc  xxa
+              #  xxx  xxb
+              #  xxx  xxc
+              tile.rotate()
+              tile.flip_horizontal()
+          else: # i_side == SOUTH:
+            new_tile_x = relative_x
+            new_tile_y = relative_y + 1
+            if j_side == WEST:
+              #  xxx  axx
+              #  xxx  bxx
+              #  abc  cxx
+              tile.rotate()
+              tile.flip_horizontal()
+            elif j_side == EAST:
+              #  xxx  xxa
+              #  xxx  xxb
+              #  abc  xxc
+              tile.rotate()
+              tile.flip_horizontal()
+            elif j_side == SOUTH:
+              #  xxx  xxx
+              #  xxx  xxx
+              #  abc  abc
+              tile.flip_vertical()
+        elif i_edge == reverse(j_edge):
+          match = True
+          logging.debug('{} side of tile {} reverse-matches {} side of tile {}'.format(i_side, relative_tile.id, j_side, tile.id))
+          relative_tile.print()
+          tile.print()
+          # Fix it.
+          if i_side == EAST:
+            new_tile_x = relative_x + 1
+            new_tile_y = relative_y
+            if j_side == WEST:
+              #  xxa  cxx
+              #  xxb  bxx
+              #  xxc  axx
+              tile.flip_vertical()
+            elif j_side == NORTH:
+              #  xxa  cba
+              #  xxb  xxx
+              #  xxc  xxx
+              tile.rotate(3)
+            elif j_side == EAST:
+              #  xxa  xxc
+              #  xxb  xxb
+              #  xxc  xxa
+              tile.rotate(2)
+            elif j_side == SOUTH:
+              #  xxa  xxx
+              #  xxb  xxx
+              #  xxc  cba
+              tile.rotate()
+              tile.flip_vertical()
+          elif i_side == WEST:
+            new_tile_x = relative_x - 1
+            new_tile_y = relative_y
+            if j_side == WEST:
+              #  axx  cxx
+              #  bxx  bxx
+              #  cxx  axx
+              tile.rotate(2)
+            elif j_side == NORTH:
+              #  axx  cba
+              #  bxx  xxx
+              #  cxx  xxx
+              tile.rotate()
+              tile.flip_vertical()
+            elif j_side == EAST:
+              #  axx  xxc
+              #  bxx  xxb
+              #  cxx  xxa
+              tile.flip_vertical()
+            elif j_side == SOUTH:
+              #  axx  xxx
+              #  bxx  xxx
+              #  cxx  cba
+              tile.rotate()
+              tile.flip_vertical()
+          elif i_side == NORTH:
+            new_tile_x = relative_x
+            new_tile_y = relative_y - 1
+            if j_side == WEST:
+              #  abc  cxx
+              #  xxx  bxx
+              #  xxx  axx
+              tile.rotate()
+              tile.flip_vertical()
+            elif j_side == NORTH:
+              #  abc  cba
+              #  xxx  xxx
+              #  xxx  xxx
+              tile.rotate(2)
+            elif j_side == EAST:
+              #  abc  xxc
+              #  xxx  xxb
+              #  xxx  xxa
+              tile.rotate()
+            elif j_side == SOUTH:
+              #  abc  xxx
+              #  xxx  xxx
+              #  xxx  cba
+              tile.flip_horizontal()
+          else: # i_side == SOUTH:
+            new_tile_x = relative_x
+            new_tile_y = relative_y + 1
+            if j_side == WEST:
+              #  xxx  cxx
+              #  xxx  bxx
+              #  abc  axx
+              tile.rotate()
+            elif j_side == NORTH:
+              #  xxx  cba
+              #  xxx  xxx
+              #  abc  xxx
+              tile.flip_horizontal()
+            elif j_side == EAST:
+              #  xxx  xxc
+              #  xxx  xxb
+              #  abc  xxa
+              tile.rotate()
+              tile.flip_horizontal()
+            elif j_side == SOUTH:
+              #  xxx  xxx
+              #  xxx  xxx
+              #  abc  cba
+              tile.rotate(2)
+        if match:
+          # TODO: check neighbours before we commit.
+          self.grid[new_tile_x][new_tile_y] = tile
+          self.empty_spaces -= 1
+          logging.debug("After re-orienting the tiles:")
+          relative_tile.print()
+          tile.print()
+          return new_tile_x, new_tile_y
+    if new_tile_x == -1:
+      logging.error("Failed to fit tile {} relative to {}".format(tile.id, relative_tile.id))
+    return new_tile_x, new_tile_y
+
+
 
 class Tile:
   def __init__(self, id, lines):
@@ -56,27 +295,24 @@ class Tile:
     self.lines = reverse(self.lines)
     self.compute_edges()
 
-  def rotate(self):
+  # 90 degrees clockwise
+  def rotate(self, times=1):
     # abcd    miea
     # efgh -> njfb
     # ijkl    okgc
     # mnop    plhd
-    new_lines = []
-    for i in range(len(self.lines)):
-      new_lines.append(''.join(reverse([l[i] for l in self.lines])))
-    self.lines = new_lines
-    self.compute_edges
+    for i in range(times):
+      new_lines = []
+      for i in range(len(self.lines)):
+        new_lines.append(''.join(reverse([l[i] for l in self.lines])))
+      self.lines = new_lines
+    self.compute_edges()
 
   def print(self):
     logging.debug("Tile {}".format(self.id))
     for line in self.lines:
       logging.debug(line)
 
-
-# Test tile arrangement:
-# 1951    2311    3079
-# 2729    1427    2473
-# 2971    1489    1171
 
 tiles = list()
 
@@ -97,7 +333,7 @@ if tile_lines:
   tiles.append(Tile(tile_id, tile_lines))
 
 tile_map = {}
-connections = defaultdict(set)
+connections = defaultdict(dict)
 
 for i in range(len(tiles)):
   i_tile = tiles[i]
@@ -107,14 +343,19 @@ for i in range(len(tiles)):
     j_tile = tiles[j]
     #logging.debug("connecting {}={} and {}={}".format(i, i_tile.id, j, j_tile.id))
     side_matches = 0
-    for i_side in ['n', 'e', 'w', 's']:
+    for i_side in DIRECTIONS:
       i_edge = i_tile.edge(i_side)
-      for j_side in ['n', 'e', 'w', 's']:
+      for j_side in DIRECTIONS:
         j_edge = j_tile.edge(j_side)
-        if i_edge == j_edge or i_edge == reverse(j_edge):
+        if i_edge == j_edge:
           logging.debug('{} side of tile {} matches {} side of tile {}'.format(i_side, i_tile.id, j_side, j_tile.id))
-          connections[i_tile.id].add(j_tile)
-          connections[j_tile.id].add(i_tile)
+          connections[i_tile.id][i_side] = j_tile
+          connections[j_tile.id][j_side] = i_tile
+          side_matches += 1
+        elif i_edge == reverse(j_edge):
+          logging.debug('{} side of tile {} reverse-matches {} side of tile {}'.format(i_side, i_tile.id, j_side, j_tile.id))
+          connections[i_tile.id][i_side] = j_tile
+          connections[j_tile.id][j_side] = i_tile
           side_matches += 1
     if side_matches > 0:
       match_count += 1
@@ -162,8 +403,59 @@ def test():
 starter = tile_map[corners[0]]
 logging.debug("Starting tile:")
 starter.print()
+
+directions = sorted(connections[starter.id].keys())
+#   It needs to be ['e', 's'] to live in the top left corner.
+if   directions == ['e', 'n']:
+  starter.flip_vertical()
+elif directions == ['s', 'w']:
+  starter.flip_horizontal()
+elif directions == ['n', 'w']:
+  starter.flip_horizontal()
+  starter.flip_vertical()
+logging.debug("After reorienting:")
+starter.print()
+
 p = Puzzle(int(math.sqrt(len(tiles))))
 p.force_tile(starter, 0, 0)
-for t in connections[starter.id]:
-  logging.debug("Fitting next tile:")
-  t.print()
+relative_tiles = [[starter, 0, 0]]
+placed_tiles = set()
+while p.empty_spaces > 0:
+  relative_tile, x, y = relative_tiles.pop(0)
+  for d, t in connections[relative_tile.id].items():
+    if t.id in placed_tiles:
+      logging.debug("Already placed {}".format(t.id))
+      continue
+    logging.debug("Fitting next tile {} relative to {}:".format(t.id, relative_tile.id))
+    next_x, next_y = p.fit_tile(t, x, y)
+    relative_tiles.append([t, next_x, next_y])
+    placed_tiles.add(t.id)
+    p.print()
+
+p.print()
+
+big_picture = []
+for x in range(p.size):
+  #big_picture.append([''] * p.size)
+  for y in range(p.size):
+    t = p.grid[x][y]
+    logging.debug("Appending tile ({},{}):".format(x, y))
+    t.print()
+
+    # Debugging:
+    #t.lines[3] = t.lines[3][0:3] + str(t.id) + t.lines[3][7:]
+
+    # trim the edges
+    t_lines = [line[1:-1] for line in t.lines]
+    t_lines.pop(0)
+    t_lines.pop()
+    for i, line in enumerate(t_lines):
+      if y == 0:
+        big_picture.append(line)
+      else:
+        big_picture[x*len(t_lines)+i] += line
+
+logging.debug("Big picture:")
+for line in big_picture:
+  logging.debug(" {}".format(line))
+
