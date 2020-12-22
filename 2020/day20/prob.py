@@ -47,17 +47,17 @@ class Puzzle:
       self.empty_spaces -= 1
     self.grid[x][y] = tile
 
-  def fit_tile(self, tile, relative_x, relative_y):
-    relative_tile = self.grid[relative_x][relative_y]
-    logging.debug("Trying to fit {} relative to {}({},{})".format(tile.id, relative_tile.id, relative_x, relative_y))
+  def fit_tile(self, tile, relative_row, relative_col):
+    relative_tile = self.grid[relative_row][relative_col]
+    logging.debug("Trying to fit {} relative to {}({},{})".format(tile.id, relative_tile.id, relative_row, relative_col))
     possible_directions = []
-    if relative_x - 1 >= 0 and self.grid[relative_x - 1][relative_y] is None:
+    if relative_col - 1 >= 0 and self.grid[relative_row][relative_col - 1] is None:
       possible_directions.append(WEST)
-    if relative_x + 1 < self.size and self.grid[relative_x + 1][relative_y] is None:
+    if relative_col + 1 < self.size and self.grid[relative_row][relative_col + 1] is None:
       possible_directions.append(EAST)
-    if relative_y - 1 >= 0 and self.grid[relative_x][relative_y - 1] is None:
+    if relative_row - 1 >= 0 and self.grid[relative_row - 1][relative_col] is None:
       possible_directions.append(NORTH)
-    if relative_y + 1 < self.size and self.grid[relative_x][relative_y + 1] is None:
+    if relative_row + 1 < self.size and self.grid[relative_row + 1][relative_col] is None:
       possible_directions.append(SOUTH)
 
     if tile is None:
@@ -65,8 +65,8 @@ class Puzzle:
     if relative_tile is None:
       logging.error("relative_tile is None")
 
-    new_tile_x = -1
-    new_tile_y = -1
+    new_tile_row = -1
+    new_tile_col = -1
     for i_side in possible_directions:
       logging.debug("Trying to put {} to the {} of {}".format(tile.id, i_side, relative_tile.id))
       i_edge = relative_tile.edge(i_side)
@@ -79,8 +79,8 @@ class Puzzle:
           #relative_tile.print()
           #tile.print()
           if i_side == EAST:
-            new_tile_x = relative_x + 1
-            new_tile_y = relative_y
+            new_tile_row = relative_row
+            new_tile_col = relative_col + 1
             if j_side == NORTH:
               #  xxa  abc
               #  xxb  xxx
@@ -98,8 +98,8 @@ class Puzzle:
               #  xxc  abc
               tile.rotate()
           elif i_side == WEST:
-            new_tile_x = relative_x - 1
-            new_tile_y = relative_y
+            new_tile_row = relative_row - 1
+            new_tile_col = relative_col
             if j_side == WEST:
               #  axx  axx
               #  bxx  bxx
@@ -117,8 +117,8 @@ class Puzzle:
               tile.rotate()
               tile.flip_horizontal()
           elif i_side == NORTH:
-            new_tile_x = relative_x
-            new_tile_y = relative_y - 1
+            new_tile_row = relative_row - 1
+            new_tile_col = relative_col
             if j_side == WEST:
               #  abc  axx
               #  xxx  bxx
@@ -137,8 +137,8 @@ class Puzzle:
               tile.rotate()
               tile.flip_horizontal()
           else: # i_side == SOUTH:
-            new_tile_x = relative_x
-            new_tile_y = relative_y + 1
+            new_tile_row = relative_row + 1
+            new_tile_col = relative_col
             if j_side == WEST:
               #  xxx  axx
               #  xxx  bxx
@@ -163,8 +163,8 @@ class Puzzle:
           #tile.print()
           # Fix it.
           if i_side == EAST:
-            new_tile_x = relative_x + 1
-            new_tile_y = relative_y
+            new_tile_row = relative_row
+            new_tile_col = relative_col + 1
             if j_side == WEST:
               #  xxa  cxx
               #  xxb  bxx
@@ -187,8 +187,8 @@ class Puzzle:
               tile.rotate()
               tile.flip_vertical()
           elif i_side == WEST:
-            new_tile_x = relative_x - 1
-            new_tile_y = relative_y
+            new_tile_row = relative_row
+            new_tile_col = relative_col - 1
             if j_side == WEST:
               #  axx  cxx
               #  bxx  bxx
@@ -212,8 +212,8 @@ class Puzzle:
               tile.rotate()
               tile.flip_vertical()
           elif i_side == NORTH:
-            new_tile_x = relative_x
-            new_tile_y = relative_y - 1
+            new_tile_row = relative_row - 1
+            new_tile_col = relative_col
             if j_side == WEST:
               #  abc  cxx
               #  xxx  bxx
@@ -236,8 +236,8 @@ class Puzzle:
               #  xxx  cba
               tile.flip_horizontal()
           else: # i_side == SOUTH:
-            new_tile_x = relative_x
-            new_tile_y = relative_y + 1
+            new_tile_row = relative_row + 1
+            new_tile_col = relative_col
             if j_side == WEST:
               #  xxx  cxx
               #  xxx  bxx
@@ -253,35 +253,39 @@ class Puzzle:
               #  xxx  xxb
               #  abc  xxa
               tile.rotate()
-              tile.flip_horizontal()
+              tile.flip_vertical()
             elif j_side == SOUTH:
               #  xxx  xxx
               #  xxx  xxx
               #  abc  cba
               tile.rotate(2)
+        else:
+          logging.debug("No match for tile {} {} to tile {} {}".format(relative_tile.id, i_side, tile.id, j_side))
+
         if match:
           # TODO: check neighbours before we commit.
-          logging.debug("Looks like we can place {} at ({},{}). Checking neighbours.".format(tile.id, new_tile_x, new_tile_y))
-          if self.check_neighbours(tile, new_tile_x, new_tile_y):
-            logging.debug("And it fits its neighbours!".format(tile.id, new_tile_x, new_tile_y))
-            self.grid[new_tile_x][new_tile_y] = tile
+          logging.debug("Looks like we can place {} at ({},{}). Checking neighbours.".format(tile.id, new_tile_row, new_tile_col))
+          if self.check_neighbours(tile, new_tile_row, new_tile_col):
+            logging.debug("And it fits its neighbours!")
+            self.grid[new_tile_row][new_tile_col] = tile
             self.empty_spaces -= 1
           else:
-            logging.debug("Sadly it doesn't fit.".format(tile.id, new_tile_x, new_tile_y))
+            logging.debug("Sadly it doesn't fit.".format(tile.id, new_tile_row, new_tile_col))
           #logging.debug("After re-orienting the tiles:")
           #relative_tile.print()
           #tile.print()
-          return new_tile_x, new_tile_y
-    if new_tile_x == -1:
-      logging.error("Failed to fit tile {} relative to {}".format(tile.id, relative_tile.id))
-    return new_tile_x, new_tile_y
+          return new_tile_row, new_tile_col
 
-  def check_neighbours(self, tile, tile_x, tile_y):
+    if new_tile_row == -1:
+      logging.error("Failed to fit tile {} relative to {}".format(tile.id, relative_tile.id))
+    return new_tile_row, new_tile_col
+
+  def check_neighbours(self, tile, tile_r, tile_c):
     for x, y, dtile, drel in [
-        (tile_x - 1, tile_y,     'w', 'e'),
-        (tile_x,     tile_y - 1, 'n', 's'),
-        (tile_x,     tile_y + 1, 's', 'n'),
-        (tile_x + 1, tile_y,     'e', 'w'),
+        (tile_r - 1, tile_c,     'n', 's'),
+        (tile_r,     tile_c - 1, 'w', 'e'),
+        (tile_r,     tile_c + 1, 'e', 'w'),
+        (tile_r + 1, tile_c,     's', 'n'),
       ]:
       if x < 0 or x >= self.size or y < 0 or y >= self.size:
         continue
@@ -289,7 +293,7 @@ class Puzzle:
       if neighbour is None:
         continue
       if tile.edge(dtile) != neighbour.edge(drel):
-        logging.debug("Tile {} at ({},{}) would not fit with it's neighbour to the {} because '{}' != '{}'".format(tile.id, tile_x, tile_y, dtile, tile.edge(dtile), neighbour.edge(drel)))
+        logging.debug("Tile {} at ({},{}) would not fit with its neighbour to the {} because '{}' != '{}'".format(tile.id, tile_r, tile_c, dtile, tile.edge(dtile), neighbour.edge(drel)))
         tile.print()
         neighbour.print()
         return False
@@ -447,14 +451,14 @@ relative_tiles = [[starter, 0, 0]]
 placed_tiles = set()
 placed_tiles.add(starter.id)
 while p.empty_spaces > 0:
-  relative_tile, x, y = relative_tiles.pop(0)
+  relative_tile, row, col = relative_tiles.pop(0)
   for d, t in sorted(connections[relative_tile.id].items(), key=lambda a: len(connections[a[1].id])):
     if t.id in placed_tiles:
       logging.debug("Already placed {}".format(t.id))
       continue
     logging.debug("Fitting next tile {} relative to {}:".format(t.id, relative_tile.id))
-    next_x, next_y = p.fit_tile(t, x, y)
-    relative_tiles.append([t, next_x, next_y])
+    next_row, next_col = p.fit_tile(t, row, col)
+    relative_tiles.append([t, next_row, next_col])
     placed_tiles.add(t.id)
     p.print()
   #relative_tiles.sort(key=lambda x: len(connections[x[0].id]))
