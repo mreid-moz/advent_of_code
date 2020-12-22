@@ -149,8 +149,8 @@ class Puzzle:
               #  xxx  xxa
               #  xxx  xxb
               #  abc  xxc
-              tile.rotate()
-              tile.flip_horizontal()
+              tile.rotate(3)
+              #tile.flip_vertical()
             elif j_side == SOUTH:
               #  xxx  xxx
               #  xxx  xxx
