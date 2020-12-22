@@ -13,6 +13,7 @@ WEST  = 'w'
 SOUTH = 's'
 DIRECTIONS = [NORTH, EAST, WEST, SOUTH]
 
+
 input_file = 'input'
 if len(sys.argv) >= 2:
   input_file = sys.argv[1]
@@ -32,9 +33,9 @@ class Puzzle:
 
   def print(self):
     logging.debug("Puzzle state:")
-    for x in range(self.size):
+    for row in range(self.size):
       spots = []
-      for spot in self.grid[x]:
+      for spot in self.grid[row]:
         if spot is None:
           spots.append('____')
         else:
@@ -48,6 +49,7 @@ class Puzzle:
 
   def fit_tile(self, tile, relative_x, relative_y):
     relative_tile = self.grid[relative_x][relative_y]
+    logging.debug("Trying to fit {} relative to {}({},{})".format(tile.id, relative_tile.id, relative_x, relative_y))
     possible_directions = []
     if relative_x - 1 >= 0 and self.grid[relative_x - 1][relative_y] is None:
       possible_directions.append(WEST)
@@ -74,8 +76,8 @@ class Puzzle:
         if i_edge == j_edge:
           match = True
           logging.debug('{} side of tile {} matches {} side of tile {}'.format(i_side, relative_tile.id, j_side, tile.id))
-          relative_tile.print()
-          tile.print()
+          #relative_tile.print()
+          #tile.print()
           if i_side == EAST:
             new_tile_x = relative_x + 1
             new_tile_y = relative_y
@@ -157,8 +159,8 @@ class Puzzle:
         elif i_edge == reverse(j_edge):
           match = True
           logging.debug('{} side of tile {} reverse-matches {} side of tile {}'.format(i_side, relative_tile.id, j_side, tile.id))
-          relative_tile.print()
-          tile.print()
+          #relative_tile.print()
+          #tile.print()
           # Fix it.
           if i_side == EAST:
             new_tile_x = relative_x + 1
@@ -259,16 +261,39 @@ class Puzzle:
               tile.rotate(2)
         if match:
           # TODO: check neighbours before we commit.
-          self.grid[new_tile_x][new_tile_y] = tile
-          self.empty_spaces -= 1
-          logging.debug("After re-orienting the tiles:")
-          relative_tile.print()
-          tile.print()
+          logging.debug("Looks like we can place {} at ({},{}). Checking neighbours.".format(tile.id, new_tile_x, new_tile_y))
+          if self.check_neighbours(tile, new_tile_x, new_tile_y):
+            logging.debug("And it fits its neighbours!".format(tile.id, new_tile_x, new_tile_y))
+            self.grid[new_tile_x][new_tile_y] = tile
+            self.empty_spaces -= 1
+          else:
+            logging.debug("Sadly it doesn't fit.".format(tile.id, new_tile_x, new_tile_y))
+          #logging.debug("After re-orienting the tiles:")
+          #relative_tile.print()
+          #tile.print()
           return new_tile_x, new_tile_y
     if new_tile_x == -1:
       logging.error("Failed to fit tile {} relative to {}".format(tile.id, relative_tile.id))
     return new_tile_x, new_tile_y
 
+  def check_neighbours(self, tile, tile_x, tile_y):
+    for x, y, dtile, drel in [
+        (tile_x - 1, tile_y,     'w', 'e'),
+        (tile_x,     tile_y - 1, 'n', 's'),
+        (tile_x,     tile_y + 1, 's', 'n'),
+        (tile_x + 1, tile_y,     'e', 'w'),
+      ]:
+      if x < 0 or x >= self.size or y < 0 or y >= self.size:
+        continue
+      neighbour = self.grid[x][y]
+      if neighbour is None:
+        continue
+      if tile.edge(dtile) != neighbour.edge(drel):
+        logging.debug("Tile {} at ({},{}) would not fit with it's neighbour to the {} because '{}' != '{}'".format(tile.id, tile_x, tile_y, dtile, tile.edge(dtile), neighbour.edge(drel)))
+        tile.print()
+        neighbour.print()
+        return False
+    return True
 
 
 class Tile:
@@ -420,9 +445,10 @@ p = Puzzle(int(math.sqrt(len(tiles))))
 p.force_tile(starter, 0, 0)
 relative_tiles = [[starter, 0, 0]]
 placed_tiles = set()
+placed_tiles.add(starter.id)
 while p.empty_spaces > 0:
   relative_tile, x, y = relative_tiles.pop(0)
-  for d, t in connections[relative_tile.id].items():
+  for d, t in sorted(connections[relative_tile.id].items(), key=lambda a: len(connections[a[1].id])):
     if t.id in placed_tiles:
       logging.debug("Already placed {}".format(t.id))
       continue
@@ -431,6 +457,7 @@ while p.empty_spaces > 0:
     relative_tiles.append([t, next_x, next_y])
     placed_tiles.add(t.id)
     p.print()
+  #relative_tiles.sort(key=lambda x: len(connections[x[0].id]))
 
 p.print()
 
@@ -459,3 +486,49 @@ logging.debug("Big picture:")
 for line in big_picture:
   logging.debug(" {}".format(line))
 
+class Matrix:
+  def __init__(self, lines):
+    self.lines = lines
+
+  def print(self):
+    for line in lines:
+      logging.debug(line)
+
+  def find(self, other_matrix):
+    width = len(self.lines[0])
+    height = len(self.lines)
+    o_width = len(other_matrix.lines[0])
+    o_height = len(other_matrix.lines)
+    for x in range(height - o_height):
+      for y in range(width - o_width):
+        found = False
+        for i, line in enumerate(other.lines):
+          if self.lines[x][y:].startswith(line):
+            found = True
+            break
+        if found:
+          logging.debug("Found at ({},{})".format(x, y))
+          return x, y
+    return None, None
+
+def test():
+  m = [
+    'aaaaa',
+    'abbba',
+    'abbba',
+    'aaaaa',
+    'aaaaa',
+  ]
+  om = [
+   'bbb',
+   'bbb'
+  ]
+
+  matrix = Matrix(m)
+  other = Matrix(om)
+
+  x, y = matrix.find(other)
+  assert(x == 1 and y == 1)
+
+
+test()
