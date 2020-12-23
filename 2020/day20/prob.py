@@ -5,7 +5,7 @@ import sys
 
 from collections import defaultdict
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 NORTH = 'n'
 EAST  = 'e'
@@ -76,8 +76,6 @@ class Puzzle:
         if i_edge == j_edge:
           match = True
           logging.debug('{} side of tile {} matches {} side of tile {}'.format(i_side, relative_tile.id, j_side, tile.id))
-          #relative_tile.print()
-          #tile.print()
           if i_side == EAST:
             new_tile_row = relative_row
             new_tile_col = relative_col + 1
@@ -150,7 +148,6 @@ class Puzzle:
               #  xxx  xxb
               #  abc  xxc
               tile.rotate(3)
-              #tile.flip_vertical()
             elif j_side == SOUTH:
               #  xxx  xxx
               #  xxx  xxx
@@ -159,8 +156,6 @@ class Puzzle:
         elif i_edge == reverse(j_edge):
           match = True
           logging.debug('{} side of tile {} reverse-matches {} side of tile {}'.format(i_side, relative_tile.id, j_side, tile.id))
-          #relative_tile.print()
-          #tile.print()
           # Fix it.
           if i_side == EAST:
             new_tile_row = relative_row
@@ -263,7 +258,7 @@ class Puzzle:
           logging.debug("No match for tile {} {} to tile {} {}".format(relative_tile.id, i_side, tile.id, j_side))
 
         if match:
-          # TODO: check neighbours before we commit.
+          # I think it always fits, but earlier bugs :(
           logging.debug("Looks like we can place {} at ({},{}). Checking neighbours.".format(tile.id, new_tile_row, new_tile_col))
           if self.check_neighbours(tile, new_tile_row, new_tile_col):
             logging.debug("And it fits its neighbours!")
@@ -271,9 +266,6 @@ class Puzzle:
             self.empty_spaces -= 1
           else:
             logging.debug("Sadly it doesn't fit.".format(tile.id, new_tile_row, new_tile_col))
-          #logging.debug("After re-orienting the tiles:")
-          #relative_tile.print()
-          #tile.print()
           return new_tile_row, new_tile_col
 
     if new_tile_row == -1:
@@ -348,7 +340,6 @@ tiles = list()
 tile_lines = list()
 tile_id = None
 for line in my_input:
-  #logging.debug("found a line: {}".format(line))
   if line.startswith("Tile"):
     tile_id = int(line[5:-1])
   elif line == '':
@@ -370,7 +361,6 @@ for i in range(len(tiles)):
   match_count = 0
   for j in range(i+1, len(tiles)):
     j_tile = tiles[j]
-    #logging.debug("connecting {}={} and {}={}".format(i, i_tile.id, j, j_tile.id))
     side_matches = 0
     for i_side in DIRECTIONS:
       i_edge = i_tile.edge(i_side)
@@ -427,7 +417,7 @@ def test():
   t.rotate()
   t.print()
 
-#test()
+#test2()
 
 starter = tile_map[corners[0]]
 logging.debug("Starting tile:")
@@ -452,6 +442,7 @@ placed_tiles = set()
 placed_tiles.add(starter.id)
 while p.empty_spaces > 0:
   relative_tile, row, col = relative_tiles.pop(0)
+  # Get these in order of "fewest neighbours"
   for d, t in sorted(connections[relative_tile.id].items(), key=lambda a: len(connections[a[1].id])):
     if t.id in placed_tiles:
       logging.debug("Already placed {}".format(t.id))
@@ -461,30 +452,25 @@ while p.empty_spaces > 0:
     relative_tiles.append([t, next_row, next_col])
     placed_tiles.add(t.id)
     p.print()
-  #relative_tiles.sort(key=lambda x: len(connections[x[0].id]))
 
 p.print()
 
 big_picture = []
-for x in range(p.size):
-  #big_picture.append([''] * p.size)
-  for y in range(p.size):
-    t = p.grid[x][y]
-    logging.debug("Appending tile ({},{}):".format(x, y))
+for row in range(p.size):
+  for col in range(p.size):
+    t = p.grid[row][col]
+    logging.debug("Appending tile ({},{}):".format(row, col))
     t.print()
-
-    # Debugging:
-    #t.lines[3] = t.lines[3][0:3] + str(t.id) + t.lines[3][7:]
 
     # trim the edges
     t_lines = [line[1:-1] for line in t.lines]
     t_lines.pop(0)
     t_lines.pop()
     for i, line in enumerate(t_lines):
-      if y == 0:
+      if col == 0:
         big_picture.append(line)
       else:
-        big_picture[x*len(t_lines)+i] += line
+        big_picture[row*len(t_lines)+i] += line
 
 logging.debug("Big picture:")
 for line in big_picture:
@@ -495,27 +481,96 @@ class Matrix:
     self.lines = lines
 
   def print(self):
-    for line in lines:
+    for line in self.lines:
       logging.debug(line)
+
+  def print_corners(self):
+    logging.debug("{}...{}".format(self.lines[0][0], self.lines[0][-1]))
+    logging.debug("{}...{}".format(self.lines[-1][0], self.lines[-1][-1]))
 
   def find(self, other_matrix):
     width = len(self.lines[0])
     height = len(self.lines)
     o_width = len(other_matrix.lines[0])
     o_height = len(other_matrix.lines)
-    for x in range(height - o_height):
-      for y in range(width - o_width):
-        found = False
-        for i, line in enumerate(other.lines):
-          if self.lines[x][y:].startswith(line):
-            found = True
+    for row in range(height - o_height):
+      for col in range(width - o_width):
+        found_all = True
+        for i, line in enumerate(other_matrix.lines):
+          if self.lines[row][col:].startswith(line):
+            logging.debug("Found '{}' in line {}='{}' at offset {}".format(line, row, self.lines[row], col))
+          else:
+            logging.debug("Didn't find '{}' in line {}='{}'".format(line, row, self.lines[row]))
+            found_all = False
             break
-        if found:
-          logging.debug("Found at ({},{})".format(x, y))
-          return x, y
+        if found_all:
+          logging.debug("Found at ({},{})".format(col, row))
+          return row, col
     return None, None
 
-def test():
+  def find_all(self, needle):
+    coords = []
+    for row in range(len(self.lines)):
+      for col in range(len(self.lines[0])):
+        if self.lines[row][col] == needle:
+          coords.append([row, col])
+    return coords
+
+  def count(self, needle):
+    total = 0
+    for row in range(len(self.lines)):
+      for col in range(len(self.lines[0])):
+        if self.lines[row][col] == needle:
+          total += 1
+    return total
+
+  def match_coords(self, match_char, coords, relative_row, relative_col):
+    for row, col in coords:
+      if self.lines[row+relative_row][col+relative_col] != match_char:
+        return False
+    return True
+
+  def update_coords(self, coords, replacement_char, relative_row, relative_col):
+    for r, c in coords:
+      row = relative_row + r
+      col = relative_col + c
+      self.lines[row] = self.lines[row][:col] + replacement_char + self.lines[row][col+1:]
+
+  def mask(self, other_matrix, mask_char='#', replace_char='O'):
+    mask_coords = other_matrix.find_all(mask_char)
+
+    width = len(self.lines[0])
+    height = len(self.lines)
+    o_width = len(other_matrix.lines[0])
+    o_height = len(other_matrix.lines)
+
+    match_count = 0
+    for row in range(height - o_height):
+      for col in range(width - o_width):
+        if self.match_coords(mask_char, mask_coords, row, col):
+          self.update_coords(mask_coords, replace_char, row, col)
+          match_count += 1
+    return match_count
+
+  def flip_horizontal(self):
+    self.lines = [reverse(line) for line in self.lines]
+
+  def flip_vertical(self):
+    self.lines = reverse(self.lines)
+
+  # 90 degrees clockwise
+  def rotate(self, times=1):
+    # abcd    miea
+    # efgh -> njfb
+    # ijkl    okgc
+    # mnop    plhd
+    for i in range(times):
+      new_lines = []
+      for i in range(len(self.lines)):
+        new_lines.append(''.join(reverse([l[i] for l in self.lines])))
+      self.lines = new_lines
+
+def test2():
   m = [
     'aaaaa',
     'abbba',
@@ -534,5 +589,60 @@ def test():
   x, y = matrix.find(other)
   assert(x == 1 and y == 1)
 
+  om2 = [
+   'bbb',
+   'bbc'
+  ]
 
-test()
+  row, col = matrix.find(Matrix(om2))
+  assert(row is None and row is None)
+
+#test2()
+
+bp = Matrix(big_picture)
+
+sea_monster_lines = [
+  '                  # ',
+  '#    ##    ##    ###',
+  ' #  #  #  #  #  #   '
+]
+
+monster_matrix = Matrix(sea_monster_lines)
+
+monster_coords = monster_matrix.find_all('#')
+logging.debug("Monster coords: {}".format(monster_coords))
+
+def try_flips(matrix, mask):
+  logging.debug("Trying flips... initial state:")
+  matrix.print_corners()
+  replace_count = matrix.mask(mask)
+  if replace_count == 0:
+    matrix.flip_horizontal()
+    logging.debug("Trying flips... after h flip:")
+    matrix.print_corners()
+    replace_count = matrix.mask(mask)
+    logging.debug("replace count = {}".format(replace_count))
+    if replace_count == 0:
+      matrix.flip_horizontal()
+      matrix.flip_vertical()
+      logging.debug("Trying flips... after v flip:")
+      matrix.print_corners()
+      replace_count = matrix.mask(mask)
+      if replace_count == 0:
+        matrix.flip_vertical()
+  return replace_count
+
+replace_count = try_flips(bp, monster_matrix)
+if replace_count == 0:
+  bp.rotate() # now 90
+  replace_count = try_flips(bp, monster_matrix)
+  if replace_count == 0:
+    bp.rotate() # now 180
+    replace_count = try_flips(bp, monster_matrix)
+    if replace_count == 0:
+      bp.rotate() # now 270
+      replace_count = try_flips(bp, monster_matrix)
+
+#bp.print()
+
+logging.info("Part 2: water roughness {}".format(bp.count('#')))
