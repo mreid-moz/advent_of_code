@@ -26,7 +26,7 @@ with open(input_file) as fin:
 
 class HexTile:
   def __init__(self, path):
-    self.neighbours = defaultdict(HexTile)
+    self.neighbours = {}
     self.side = WHITE
     self.path = path
 
@@ -39,13 +39,23 @@ class HexTile:
       logging.debug("Flipping tile {} from {} to {}".format(self.get_path(), BLACK, WHITE))
 
   def get_path(self):
-    return ','.join(self.path)
+    return ' '.join(self.path)
+
+  def get_neighbour_sides(self):
+    sides = {}
+    for d in DIRECTIONS:
+      if d in self.neighbours:
+        sides[d] = self.neighbours[d].side
+      else:
+        sides[d] = 'x'
+    return sides
 
   def print(self, indent=0):
-    logging.debug("Path: {}".format(','.join(self.path)))
-    logging.debug(" {} {} ".format(self.neighbours.get('nw', HexTile(self.path)).side, self.neighbours.get('ne', HexTile(self.path)).side))
-    logging.debug("{} {} {}".format(self.neighbours.get('w', HexTile(self.path)).side, self.side, self.neighbours.get('e', HexTile(self.path)).side))
-    logging.debug(" {} {} ".format(self.neighbours.get('sw', HexTile(self.path)).side, self.neighbours.get('se', HexTile(self.path)).side))
+    logging.debug("Path: {}".format(self.get_path()))
+    sides = self.get_neighbour_sides()
+    logging.debug(" {} {} ".format(sides['nw'], sides['ne']))
+    logging.debug("{} {} {}".format(sides['w'], self.side, sides['e']))
+    logging.debug(" {} {} ".format(sides['sw'], sides['se']))
 
 class HexGrid:
   def __init__(self):
@@ -67,7 +77,7 @@ class HexGrid:
     return dirs
 
   def minify_directions(self, dirs):
-    logging.debug("minfying {}".format(','.join(dirs)))
+    logging.debug("minfying {}".format(' '.join(dirs)))
     dir_counts = defaultdict(int)
     for d in dirs:
       dir_counts[d] += 1
@@ -86,11 +96,11 @@ class HexGrid:
       v = dir_counts[k]
       for i in range(v):
         minified.append(k)
-    logging.debug("minified to: {}".format(','.join(minified)))
+    logging.debug("minified to: {}".format(' '.join(minified)))
     return minified
 
   def flip(self, tile, directions, already_processed_dirs=[]):
-    #logging.debug("Flipping tile {} / {}".format(", ".join(already_processed_dirs), ", ".join(directions)))
+    #logging.debug("Flipping tile {} / {}".format(" ".join(already_processed_dirs), " ".join(directions)))
     if len(directions) == 0:
       tile.flip()
     else:
