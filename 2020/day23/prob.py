@@ -158,6 +158,7 @@ logging.info("Before setting up all the cups: {}".format(cups2))
 for i in range(max_cup + 1, 1000001):
   cups2.insert(Node(i), end)
   end = end.next
+  max_cup = i
 
 logging.info("After setting up all these cups, we have current is {}, left is {}, next 20 are: {}".format(
   cups2.current.value, cups2.current.prev.value, cups2.label(cup_idx[0], separator=',')))
