@@ -4,24 +4,6 @@ import sys
 
 logging.basicConfig(level=logging.INFO)
 
-input_file = 'input'
-if len(sys.argv) >= 2:
-  input_file = sys.argv[1]
-with open(input_file) as fin:
-  my_input = [l.strip() for l in fin.readlines()]
-
-def insert(s, sublist, offset):
-  if offset < 0:
-    offset += len(s)
-  return s[:offset+1] + sublist + s[offset+1:]
-
-def remove(s, index, length):
-  if index + length > len(s):
-    removed = s[index:] + s[:index + length - len(s)]
-    remainder = s[index + length - len(s):index]
-    return removed, remainder
-  return s[index:index+length], s[:index] + s[index+length:]
-
 def step_between(v, min_value, max_value, increment):
   n = v + increment
   if n < min_value:
@@ -30,71 +12,166 @@ def step_between(v, min_value, max_value, increment):
     return min_value
   return n
 
-cups = [int(s) for s in my_input[0]]
+class Node:
+  def __init__(self, value):
+    self.value = value
+    self.next = self
+    self.prev = self
 
-def print_cups(cups, current_cup):
-  cup_strings = [str(s) for s in cups]
-  cup_strings[current_cup] = '(' + cup_strings[current_cup] + ')'
-  logging.debug("cups: {}".format(' '.join(cup_strings)))
+class LinkedList:
+  def __init__(self, value):
+    self.n_before = 0
+    self.n_after = 0
+    self.current = Node(value)
+    self.values = {
+      value: self.current
+    }
+
+  def advance(self):
+    self.current = self.current.next
+    self.n_before += 1
+    if self.n_before >= len(self.values):
+      self.n_before = 0
+
+  def find(self, value):
+    return self.values[value]
+
+  def insert(self, node, after):
+    # ... after <node> after.next
+    after.next.prev = node
+    node.prev = after
+    node.next = after.next
+    after.next = node
+    self.values[node.value] = node
+
+  def insert_list(self, first, last, after):
+    # ... after <first ... last> after.next
+    after.next.prev = last
+    last.next = after.next
+    after.next = first
+    first.prev = after
+
+  def remove(self, after, length):
+    first = after.next
+    last = first
+    for i in range(length-1):
+      last = last.next
+
+    after.next = last.next
+    last.next.prev = after
+
+    first.prev = None
+    last.next = None
+    return first, last
+
+  def label(self, value, count=20, separator=''):
+    node = self.find(value)
+    values = []
+    n = node.next
+    for i in range(count):
+      values.append(n.value)
+      n = n.next
+      if n == node:
+        break
+    return separator.join([str(v) for v in values])
+
+  def __str__(self):
+    values = ['(' + str(self.current.value) + ')']
+    tn = self.current
+    tp = self.current
+    for i in range(self.n_before):
+      tp = tp.prev
+      values.insert(0, str(tp.value))
+    for i in range(len(self.values)):
+      tn = tn.next
+      if tn == tp:
+        break
+      values.append(str(tn.value))
+
+    return ' '.join(values)
+
+
+input_file = 'input'
+if len(sys.argv) >= 2:
+  input_file = sys.argv[1]
+with open(input_file) as fin:
+  my_input = [l.strip() for l in fin.readlines()]
+
+cup_idx = [int(s) for s in my_input[0]]
+cups = LinkedList(cup_idx[0])
+end = cups.current
+min_cup = cup_idx[0]
+max_cup = cup_idx[0]
+
+for c in cup_idx[1:]:
+  cups.insert(Node(c), end)
+  end = end.next
+  if c > max_cup:
+    max_cup = c
+  if c < min_cup:
+    min_cup = c
+
+logging.debug("before starting: {}".format(cups))
 
 def run(cups, iterations):
-  n_cups = len(cups)
-  min_cup = cups[0]
-  max_cup = cups[0]
-  for cup in cups[1:]:
-    if cup > max_cup:
-      max_cup = cup
-    if cup < min_cup:
-      min_cup = cup
-  current_cup = 0
   move_num = 0
   for i in range(iterations):
     move_num += 1
-    logging.info("-- move {} --".format(move_num))
-    print_cups(cups, current_cup)
-    destination_cup = cups[current_cup] - 1
-    removed, cups = remove(cups, current_cup + 1, 3)
-    logging.debug("pick up: {}".format(removed))
-    while True:
-      try:
-        destination_idx = cups.index(destination_cup)
-        break
-      except ValueError:
-        destination_cup = step_between(destination_cup, min_cup, max_cup, -1)
-    logging.debug("destination: {} (index {})".format(destination_cup, destination_idx))
-    cups = insert(cups, removed, destination_idx)
-
-    # we moved some from after current cup to before
-    if destination_idx < current_cup:
-      # we can't move the current cup, so re-shuffle up to 3 items
-      for _ in range(min(3, len(cups) - current_cup - 1)):
-        cups.append(cups.pop(0))
-    current_cup = step_between(current_cup, 0, n_cups - 1, 1)
-  logging.debug("Final")
-  print_cups(cups, current_cup)
-  return cups, current_cup
+    if move_num % 100000 == 0:
+      logging.info("-- move {} --".format(move_num))
+    #logging.debug("Cups: {}".format(cups))
+    destination_value = step_between(cups.current.value, min_cup, max_cup, -1)
+    first, last = cups.remove(cups.current, 3)
+    #logging.debug("pick up: {}, {}, {}".format(first.value, first.next.value, last.value))
+    #logging.debug("after picking up: {}".format(cups))
+    while destination_value == first.value or destination_value == first.next.value or destination_value == last.value:
+      destination_value = step_between(destination_value, min_cup, max_cup, -1)
+    #logging.debug("destination: {}".format(destination_value))
+    cups.insert_list(first, last, cups.find(destination_value))
+    #logging.debug("after replacing: {}".format(cups))
+    cups.advance()
+  #logging.debug("Final: {}".format(cups))
+  #return cups
 
 def get_cups_after(cups, n):
-  idx = cups.index(n)
+  node = cups.find(n)
+
   return cups[idx+1:] + cups[:idx]
 
-cups, current_cup = run(cups, 100)
-logging.info("Part 1: After 100 moves, cups look like {}".format(''.join(str(c) for c in get_cups_after(cups, 1))))
+run(cups, 100)
+logging.info("Part 1: After 100 moves, cups look like {}".format(cups.label(1)))
 
+# 38756249
 
-cups = [int(s) for s in my_input[0]]
-n_cups = len(cups)
-max_cup = max(cups)
+cup_idx = [int(s) for s in my_input[0]]
+max_cup = max(cup_idx)
+
+cups2 = LinkedList(cup_idx[0])
+end = cups2.current
+
+for c in cup_idx[1:]:
+  cups2.insert(Node(c), end)
+  end = end.next
+
+logging.info("Before setting up all the cups: {}".format(cups2))
 
 for i in range(max_cup + 1, 1000001):
-  cups.append(i)
+  cups2.insert(Node(i), end)
+  end = end.next
 
-cups, current_cup = run(cups, 100)
-one_idx = cups.index(1)
-n1_idx = step_between(one_idx, 0, len(cups) - 1, 1)
-n2_idx = step_between(n1_idx, 0, len(cups) - 1, 1)
-cup_prod = cups[n1_idx] * cups[n2_idx]
-logging.info("Part 2: After 100 moves, cup product was {}".format(cup_prod))
+logging.info("After setting up all these cups, we have current is {}, left is {}, next 20 are: {}".format(
+  cups2.current.value, cups2.current.prev.value, cups2.label(cup_idx[0], separator=',')))
 
-# Oh no, it takes a long time for just 100 iterations. Time to rethink things.
+part_two_iterations = 10000000
+run(cups2, part_two_iterations)
+one = cups2.find(1)
+two = one.next.value
+three = one.next.next.value
+cup_prod = two * three
+logging.info("Part 2: After {} moves, cup product was {}*{}={}".format(part_two_iterations, two, three, cup_prod))
+
+left = one.prev.prev.prev.prev.prev
+logging.info("Other intel. Current was {}, and the neighbourhood of 1 was {}".format(cups2.current.value, cups2.label(left.value, separator=',')))
+
+# 663374593630 is too high
 
