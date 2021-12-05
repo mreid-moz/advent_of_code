@@ -56,52 +56,29 @@ for coord in my_input:
 
   if x1 != x2 and y1 != y2:
     # diagonal
-    if x1 < x2:
-      if y1 < y2:
+    if (x1 < x2 and y1 < y2) or (x1 > x2 and y1 > y2):
         # 0,0 -> 8,8
-        #   p1 . .
-        #    . \ .
-        #    . . p2
+        #   p1 . .      p2 . .
+        #    . \ .   or  . \ .
+        #    . . p2      . . p1
         for d in range(xdiff+1):
           x = xmin + d
           y = ymin + d
           point = '{},{}'.format(x, y)
           logging.debug("diagonal type 1 from {},{} to {},{} contains {}".format(x1, y1, x2, y2, point))
           floor[point] += 1
-      else:
-        # 5,5 to 8,2
-        #    . . p2
-        #    . / .
-        #   p1 . .
-        for d in range(xdiff+1):
-          x = xmin + d
-          y = ymax - d
-          point = '{},{}'.format(x, y)
-          logging.debug("diagonal type 2 from {},{} to {},{} contains {}".format(x1, y1, x2, y2, point))
-          floor[point] += 1
-    else: # x1 > x2
-      if y1 < y2:
-        # 8,0 -> 0,8
-        #    . . p1
-        #    . / .
-        #   p2 . .
-        for d in range(xdiff+1):
-          x = xmin + d
-          y = ymax - d
-          point = '{},{}'.format(x, y)
-          logging.debug("diagonal type 3 from {},{} to {},{} contains {}".format(x1, y1, x2, y2, point))
-          floor[point] += 1
-      else:
-        # 6,4 -> 2,0
-        #   p2 . .
-        #    . \ .
-        #    . . p1
-        for d in range(xdiff+1):
-          x = xmin + d
-          y = ymin + d
-          point = '{},{}'.format(x, y)
-          logging.debug("diagonal type 4 from {},{} to {},{} contains {}".format(x1, y1, x2, y2, point))
-          floor[point] += 1
+
+    else:
+      # 5,5 to 8,2
+      #    . . p2       . . p1
+      #    . / .   or   . / .
+      #   p1 . .       p2 . .
+      for d in range(xdiff+1):
+        x = xmin + d
+        y = ymax - d
+        point = '{},{}'.format(x, y)
+        logging.debug("diagonal type 2 from {},{} to {},{} contains {}".format(x1, y1, x2, y2, point))
+        floor[point] += 1
 
   else:
     # horizontal/vertical
