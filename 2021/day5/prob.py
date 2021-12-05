@@ -3,7 +3,7 @@ import copy
 import sys
 from collections import defaultdict
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 input_file = 'input'
 if len(sys.argv) >= 2:
@@ -53,25 +53,56 @@ for coord in my_input:
   ymax = max(y1, y2)
   xdiff = xmax - xmin
   ydiff = ymax - ymin
+
   if x1 != x2 and y1 != y2:
     # diagonal
-    if x1 == y1 and x2 == y2:
-      # easy diagonal
-      for x in range(xmin, xmax+1):
-        for y in range(xmin, xmax+1):
+    if x1 < x2:
+      if y1 < y2:
+        # 0,0 -> 8,8
+        #   p1 . .
+        #    . \ .
+        #    . . p2
+        for d in range(xdiff+1):
+          x = xmin + d
+          y = ymin + d
           point = '{},{}'.format(x, y)
+          logging.debug("diagonal type 1 from {},{} to {},{} contains {}".format(x1, y1, x2, y2, point))
           floor[point] += 1
-    else:
-      # other diagonal
-      # e.g. 9,7 -> 7,9 ==> 9,7 8,8 7,9
-      # e.g. 4,6 -> 6,4 ==> 4,6 5,5 6,4
-      xdiff = xmax - xmin # 2
-      for d in range(xdiff+1):
-        x = xmin + d
-        y = xmax - d
-        point = '{},{}'.format(x, y)
-        logging.debug("diagonal from {},{} to {},{} contains {}".format(x1, y1, x2, y2, point))
-        floor[point] += 1
+      else:
+        # 5,5 to 8,2
+        #    . . p2
+        #    . / .
+        #   p1 . .
+        for d in range(xdiff+1):
+          x = xmin + d
+          y = ymax - d
+          point = '{},{}'.format(x, y)
+          logging.debug("diagonal type 2 from {},{} to {},{} contains {}".format(x1, y1, x2, y2, point))
+          floor[point] += 1
+    else: # x1 > x2
+      if y1 < y2:
+        # 8,0 -> 0,8
+        #    . . p1
+        #    . / .
+        #   p2 . .
+        for d in range(xdiff+1):
+          x = xmin + d
+          y = ymax - d
+          point = '{},{}'.format(x, y)
+          logging.debug("diagonal type 3 from {},{} to {},{} contains {}".format(x1, y1, x2, y2, point))
+          floor[point] += 1
+      else:
+        # 6,4 -> 2,0
+        #   p2 . .
+        #    . \ .
+        #    . . p1
+        for d in range(xdiff+1):
+          x = xmin + d
+          y = ymin + d
+          point = '{},{}'.format(x, y)
+          logging.debug("diagonal type 4 from {},{} to {},{} contains {}".format(x1, y1, x2, y2, point))
+          floor[point] += 1
+
   else:
     # horizontal/vertical
     for x in range(xmin, xmax+1):
