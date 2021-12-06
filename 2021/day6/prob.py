@@ -27,6 +27,13 @@ def step(state):
   state += [8] * num_new
   return state
 
+def step2(state):
+  num_new = state[0]
+  for i in range(8):
+    state[i] = state[i+1]
+  state[6] += num_new
+  state[8] = num_new
+  return state
 
 logging.info("Initial state: {}".format(to_s(initial_state)))
 
@@ -39,9 +46,16 @@ logging.info("After {} days, there are {} fish".format(i+1, len(current_state)))
 
 
 current_state = copy.deepcopy(initial_state)
-for i in range(256):
-  logging.info("processed {} days, so far there are {} fish".format(i, len(current_state)))
-  current_state = step(current_state)
-  logging.debug("After {} days: {}".format(i + 1, to_s(current_state)))
 
-logging.info("After {} days, there are {} fish".format(i+1, len(current_state)))
+def get_size(state):
+  return sum(state.values())
+
+counts = defaultdict(int)
+for fish in current_state:
+  counts[fish] += 1
+
+for i in range(256):
+  logging.info("processed {} days, so far there are {} fish".format(i, get_size(counts)))
+  counts = step2(counts)
+
+logging.info("After {} days, there are {} fish".format(i+1, get_size(counts)))
