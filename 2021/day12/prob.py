@@ -23,6 +23,14 @@ for line in my_input:
   if a != 'start' and b != 'end':
     cave_map[b].add(a)
 
+def acceptable_path(path):
+  smalls = [p for p in path if small(p)]
+  num_smalls = len(smalls)
+  num_unique_smalls = len(set(smalls))
+  if num_smalls <= num_unique_smalls + 1:
+    return True
+  return False
+
 def find_paths(position, target, current_path):
   if position == target:
     return [current_path]
@@ -37,3 +45,16 @@ def find_paths(position, target, current_path):
 p = find_paths('start', 'end', [])
 logging.info("Found {} paths through the cave".format(len(p)))
 
+def find_paths2(position, target, current_path):
+  if position == target:
+    return [current_path]
+
+  paths = []
+  for neighbour in cave_map[position]:
+    if not acceptable_path(current_path + [position]):
+      continue
+    paths += find_paths2(neighbour, target, current_path + [position])
+  return paths
+
+p = find_paths2('start', 'end', [])
+logging.info("Found {} paths through the cave".format(len(p)))
