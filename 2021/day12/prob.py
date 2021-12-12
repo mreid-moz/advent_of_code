@@ -38,7 +38,6 @@ p = find_paths('start', 'end', [])
 logging.info("Found {} paths through the cave".format(len(p)))
 
 def acceptable_path(path):
-  logging.debug("Checking path {}".format("-".join(path)))
   for single in ['start', 'end']:
     if len([n for n in path if n == single]) > 1:
       return False
@@ -46,21 +45,24 @@ def acceptable_path(path):
   num_smalls = len(smalls)
   num_unique_smalls = len(set(smalls))
   if num_smalls <= num_unique_smalls + 1:
-    logging.debug("Path was acceptable")
     return True
-  logging.debug("Path was NOT acceptable")
   return False
 
 def find_paths2(position, target, current_path):
+  next_path = current_path + [position]
   if position == target:
-    return [current_path]
+    return [next_path]
+
+  if not acceptable_path(next_path):
+    logging.debug("Path was no good.")
+    return []
 
   paths = []
   for neighbour in cave_map[position]:
-    if not acceptable_path(current_path + [position]):
-      continue
-    paths += find_paths2(neighbour, target, current_path + [position])
+    paths += find_paths2(neighbour, target, next_path)
   return paths
 
 p = find_paths2('start', 'end', [])
 logging.info("Found {} paths through the cave".format(len(p)))
+for path in p:
+  logging.debug("-".join(path))
