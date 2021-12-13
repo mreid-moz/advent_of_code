@@ -46,8 +46,8 @@ for (axis, direction) in folds[1:]:
 
 max_x = max([x for x, _ in folded])
 max_y = max([y for _, y in folded])
-for x in range(max_x + 1):
-  for y in range(max_y + 1):
+for y in range(max_y + 1):
+  for x in range(max_x + 1):
     if (x, y) in folded:
       print('#', end='')
     else:
