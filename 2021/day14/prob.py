@@ -17,24 +17,46 @@ rule_lines = my_input[2:]
 rules = {}
 for r in rule_lines:
   pair, insertion = r.split(' -> ')
-  rules[pair] = insertion
+  rules[pair] = (pair[0] + insertion, insertion + pair[1])
 
 def apply(start, rules):
-  after = start[0]
-  for i in range(1, len(start)):
-    pair = after[-1] + start[i]
-    after += rules[pair]
-    after += start[i]
+  after = defaultdict(int)
+  for pair, count in start.items():
+    v1, v2 = rules[pair]
+    after[v1] += count
+    after[v2] += count
   return after
 
-last = template
-for i in range(10):
-  last = apply(last, rules)
+current_state = defaultdict(int)
+for i in range(len(template) - 1):
+  current_state[template[i] + template[i+1]] += 1
+logging.debug("Initial state:")
+for k, v in current_state.items():
+    logging.debug("{} -> {}".format(k, v))
+
+for i in range(40):
+  current_state = apply(current_state, rules)
+
+  logging.debug("After {} steps: length {}".format(i+1, sum(current_state.values()) + 1))
+  if i == 9:
+    counts = defaultdict(int)
+    # always starts with the same character
+    counts[template[0]] += 1
+    for k, v in current_state.items():
+      counts[k[1]] += v
+    min_count = min(counts.values())
+    max_count = max(counts.values())
+
+    logging.info("After {} iterations, we get {} - {} = {}".format(
+  i+1, max_count, min_count, max_count - min_count))
+  for k, v in current_state.items():
+    logging.debug("{} -> {}".format(k, v))
 
 counts = defaultdict(int)
-for c in last:
-  counts[c] += 1
-
+counts[template[0]] += 1
+for k, v in current_state.items():
+  #counts[k[0]] += v
+  counts[k[1]] += v
 min_count = min(counts.values())
 max_count = max(counts.values())
 
