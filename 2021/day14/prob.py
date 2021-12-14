@@ -27,6 +27,14 @@ def apply(start, rules):
     after[v2] += count
   return after
 
+def get_counts(state):
+  counts = defaultdict(int)
+  # always starts with the same character
+  counts[template[0]] += 1
+  for k, v in state.items():
+    counts[k[1]] += v
+  return (min(counts.values()), max(counts.values()))
+
 current_state = defaultdict(int)
 for i in range(len(template) - 1):
   current_state[template[i] + template[i+1]] += 1
@@ -39,26 +47,12 @@ for i in range(40):
 
   logging.debug("After {} steps: length {}".format(i+1, sum(current_state.values()) + 1))
   if i == 9:
-    counts = defaultdict(int)
-    # always starts with the same character
-    counts[template[0]] += 1
-    for k, v in current_state.items():
-      counts[k[1]] += v
-    min_count = min(counts.values())
-    max_count = max(counts.values())
-
+    min_count, max_count = get_counts(current_state)
     logging.info("After {} iterations, we get {} - {} = {}".format(
   i+1, max_count, min_count, max_count - min_count))
   for k, v in current_state.items():
     logging.debug("{} -> {}".format(k, v))
 
-counts = defaultdict(int)
-counts[template[0]] += 1
-for k, v in current_state.items():
-  #counts[k[0]] += v
-  counts[k[1]] += v
-min_count = min(counts.values())
-max_count = max(counts.values())
-
+min_count, max_count = get_counts(current_state)
 logging.info("After {} iterations, we get {} - {} = {}".format(
   i+1, max_count, min_count, max_count - min_count))
