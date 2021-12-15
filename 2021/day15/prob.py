@@ -21,24 +21,25 @@ total_path_count = 0
 
 def get_closest_tentative(unvisited, distances):
   candidate = None
-  for node in unvisited:
-    distance = distances[node]["distance"]
-    if distance is not None:
-      if candidate is None or distance < distances[candidate]["distance"]:
-        candidate = node
+  candidate_dist = -1
+  for k, v in distances.items():
+    if k in unvisited:
+      if candidate is None or v < candidate_dist:
+        candidate = k
+        candidate_dist = v
   return candidate
 
 def dijkstra(grid):
-  distances = {}
+  #distances = {}
+  tentatives = {}
   unvisited_nodes = set()
   for r in range(rows):
     for c in range(cols):
-      distances[(r,c)] = {"distance": None, "tentative": True}
+      #distances[(r,c)] = {"distance": None, "tentative": True}
       unvisited_nodes.add((r,c))
 
-  distances[(0,0)] = {"distance": 0, "tentative": False}
-
   current = (0,0)
+  tentatives[current] = 0
   while unvisited_nodes:
     logging.debug("there are {} unvisited nodes to consider.".format(len(unvisited_nodes)))
     r, c = current
@@ -51,15 +52,14 @@ def dijkstra(grid):
       neighbour = (next_row, next_col)
       if neighbour not in unvisited_nodes:
         continue
-      neigh_distance = distances[current]["distance"] + grid[next_row][next_col]
-      if distances[neighbour]["distance"] is None or distances[neighbour]["distance"] > neigh_distance:
-        distances[neighbour]["distance"] = neigh_distance
+      neigh_distance = tentatives[current] + grid[next_row][next_col]
+      if neighbour not in tentatives or tentatives[neighbour] > neigh_distance:
+        tentatives[neighbour] = neigh_distance
 
-    distances[current]["tentative"] = False
     unvisited_nodes.remove(current)
     if current == (rows - 1, cols - 1):
       break
-    current = get_closest_tentative(unvisited_nodes, distances)
+    current = get_closest_tentative(unvisited_nodes, tentatives)
 
   #logging.debug("Path lengths:")
   #for r in range(rows):
@@ -69,7 +69,7 @@ def dijkstra(grid):
   #      distance = '.'
   #    print(distance, end='')
   #  print()
-  return distances[current]["distance"]
+  return tentatives[current]
 
 #min_distance = dijkstra(my_input)
 #logging.info("Part 1: Found a min distance of {}".format(min_distance))
