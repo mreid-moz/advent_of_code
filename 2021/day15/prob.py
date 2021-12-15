@@ -4,7 +4,7 @@ import re
 import sys
 from collections import defaultdict
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 input_file = 'input'
 if len(sys.argv) >= 2:
@@ -40,6 +40,7 @@ def dijkstra(grid):
 
   current = (0,0)
   while unvisited_nodes:
+    logging.debug("there are {} unvisited nodes to consider.".format(len(unvisited_nodes)))
     r, c = current
     for next_row, next_col in [(r-1,c), (r+1,c), (r,c-1), (r,c+1)]:
       if next_row < 0 or next_row >= rows:
@@ -70,7 +71,40 @@ def dijkstra(grid):
   #  print()
   return distances[current]["distance"]
 
-min_distance = dijkstra(my_input)
-logging.info("Found a min distance of {}".format(min_distance))
+#min_distance = dijkstra(my_input)
+#logging.info("Part 1: Found a min distance of {}".format(min_distance))
 
+def expand_input(grid):
+  new_grid = []
+  for r in range(rows * 5):
+    new_grid.append([0] * cols * 5)
+  for r in range(rows):
+    for c in range(cols):
+      new_grid[r][c] = grid[r][c]
 
+  for r in range(rows):
+    for c in range(cols):
+      for row_offset in range(5):
+        for col_offset in range(5):
+          if row_offset == 0 and col_offset == 0:
+            continue
+          row = row_offset * rows + r
+          col = col_offset * cols + c
+          value_offset = row_offset + col_offset
+
+          val = (grid[r][c] + value_offset)
+          if val > 9:
+            val -= 9
+          new_grid[row][col] = val
+  return new_grid
+
+grid = expand_input(my_input)
+rows *= 5
+cols *= 5
+#for r in range(rows):
+#  for c in range(cols):
+#    print(grid[r][c], end='')
+#  print()
+
+expanded_distance = dijkstra(grid)
+logging.info("Part 2: Found a min distance of {}".format(expanded_distance))
