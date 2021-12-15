@@ -19,30 +19,58 @@ min_score = None
 min_score_path = None
 total_path_count = 0
 
-def find_path(grid, x, y, current_path):
-  global min_score, min_score_path, total_path_count # :(
-  if x == cols - 1 and y == rows - 1:
-    score = sum([grid[y][x] for x,y in current_path]) + grid[y][x]
-    logging.debug("Found a path with score {}".format(score))
-    total_path_count += 1
-    if min_score is None or score < min_score:
-      logging.info("Total: {}. Found a new min path to ({},{}) with score {}".format(total_path_count, x, y, score))
-      min_score = score
-      min_score_path = current_path
-    return
+def get_closest_tentative(unvisited, distances):
+  candidate = None
+  for node in unvisited:
+    distance = distances[node]["distance"]
+    if distance is not None:
+      if candidate is None or distance < distances[candidate]["distance"]:
+        candidate = node
+  return candidate
 
-  for xd in [-1,1]:
-    for yd in [-1,1]:
-      next_x = x + xd
-      next_y = y + yd
-      if (next_x, next_y) in current_path:
-        continue
-      if next_x >= rows or next_x < 0:
-        continue
-      if next_y >= cols or next_y < 0:
-        continue
-      find_path(grid, next_x, next_y, current_path + [(x, y)])
+def dijkstra(grid):
+  distances = {}
+  unvisited_nodes = set()
+  for r in range(rows):
+    for c in range(cols):
+      distances[(r,c)] = {"distance": None, "tentative": True}
+      unvisited_nodes.add((r,c))
 
-find_path(my_input, 0, 0, [])
+  distances[(0,0)] = {"distance": 0, "tentative": False}
 
-logging.info("Found a path with min score of {}: {}".format(min_score, min_score_path))
+  current = (0,0)
+  while unvisited_nodes:
+    r, c = current
+    for next_row, next_col in [(r-1,c), (r+1,c), (r,c-1), (r,c+1)]:
+      if next_row < 0 or next_row >= rows:
+        continue
+      if next_col < 0 or next_col >= cols:
+        continue
+
+      neighbour = (next_row, next_col)
+      if neighbour not in unvisited_nodes:
+        continue
+      neigh_distance = distances[current]["distance"] + grid[next_row][next_col]
+      if distances[neighbour]["distance"] is None or distances[neighbour]["distance"] > neigh_distance:
+        distances[neighbour]["distance"] = neigh_distance
+
+    distances[current]["tentative"] = False
+    unvisited_nodes.remove(current)
+    if current == (rows - 1, cols - 1):
+      break
+    current = get_closest_tentative(unvisited_nodes, distances)
+
+  #logging.debug("Path lengths:")
+  #for r in range(rows):
+  #  for c in range(cols):
+  #    distance = distances[(r,c)]["distance"]
+  #    if distance is None:
+  #      distance = '.'
+  #    print(distance, end='')
+  #  print()
+  return distances[current]["distance"]
+
+min_distance = dijkstra(my_input)
+logging.info("Found a min distance of {}".format(min_distance))
+
+
