@@ -3,8 +3,9 @@ import copy
 import re
 import sys
 from collections import defaultdict
+from functools import reduce
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 input_file = 'input'
 if len(sys.argv) >= 2:
@@ -13,12 +14,55 @@ with open(input_file) as fin:
   my_input = [l.strip() for l in fin.readlines()]
 
 TYPES = {
+  'SUM': 0,
+  'PRODUCT': 1,
+  'MINIMUM': 2,
+  'MAXIMUM': 3,
   'LITERAL': 4,
+  'GT': 5,
+  'LT': 6,
+  'EQ': 7,
 }
 
 class Packet:
-  def __init__(self, version):
+  def __init__(self, version, type_id, literal_value, subpackets=None):
     self.version = version
+    self.type_id = type_id
+    self.literal_value = literal_value
+    self.subpackets = subpackets
+
+  def version_sum(self):
+    if self.type_id == TYPES['LITERAL']:
+      return self.version
+    return self.version + sum([p.version_sum() for p in self.subpackets])
+
+  def eval(self):
+    if self.type_id == TYPES['LITERAL']:
+      return self.literal_value
+    if self.type_id == TYPES['SUM']:
+      return sum([p.eval() for p in self.subpackets])
+    if self.type_id == TYPES['PRODUCT']:
+      return reduce((lambda x, y: x * y), [p.eval() for p in self.subpackets])
+    if self.type_id == TYPES['MINIMUM']:
+      return min([p.eval() for p in self.subpackets])
+    if self.type_id == TYPES['MAXIMUM']:
+      return max([p.eval() for p in self.subpackets])
+
+    a = self.subpackets[0].eval()
+    b = self.subpackets[1].eval()
+    if self.type_id == TYPES['GT']:
+      if a > b:
+        return 1
+      return 0
+    if self.type_id == TYPES['LT']:
+      if a < b:
+        return 1
+      return 0
+    if self.type_id == TYPES['EQ']:
+      if a == b:
+        return 1
+      return 0
+    return None
 
 class Decoder:
   def __init__(self, input_string, mode='hex'):
@@ -36,9 +80,7 @@ class Decoder:
     logging.debug("Binary packet:  {}".format(self.binary_packet))
 
   def parse(self, mode='hex'):
-    #self.read_position = 0
     while not re.match('^[0]*$', self.binary_packet[self.read_position:]):
-      #logging.debug("Parsing more... {}".format(self.binary_packet[self.read_position:]))
       if self.read_position >= len(self.binary_packet) - 1:
         break
       self.packets += self.parse_one_packet()
@@ -51,42 +93,41 @@ class Decoder:
   def read_int(self, num_bits):
     return int(self.read(num_bits, as_int=True), 2)
 
+  def eval(self):
+    logging.debug(f"Evaluating {len(self.packets)} packets")
+    return self.packets[0].eval()
+
+
   def parse_one_packet(self):
     logging.debug("Parsing one packet starting from position {}".format(self.read_position))
 
     # 3 bits -> version
-    self.version = self.read_int(3)
-    logging.debug("Packet version: {}".format(self.version))
+    version = self.read_int(3)
+    logging.debug("Packet version: {}".format(version))
 
     # 3 bits -> type id
-    self.type_id = self.read_int(3)
-    logging.debug("Packet type id: {}".format(self.type_id))
+    type_id = self.read_int(3)
+    logging.debug("Packet type id: {}".format(type_id))
 
-    if self.type_id == TYPES['LITERAL']:
+    if type_id == TYPES['LITERAL']:
       # break into chunks of 5 bits
       literal_bits = ''
-      #bits_read = 0
       while True:
         literal_chunk = self.read(5)
-        #bits_read += 5
         literal_bits += literal_chunk[1:]
         if literal_chunk[0] == '0':
           # last one
-          ## todo: Read any leftover junk?
-          #self.read(4 - (bits_read % 4))
           break
-      self.literal_value = int(literal_bits, 2)
-      logging.debug("Packet literal value: {}".format(self.literal_value))
-      return [Packet(self.version)]
+      literal_value = int(literal_bits, 2)
+      logging.debug("Packet literal value: {}".format(literal_value))
+      return [Packet(version, type_id, literal_value)]
     else:
       # Operator packet
       op_start = self.read_position
       logging.debug("Begin parsing operator packet starting at {}".format(op_start))
-      self.length_type_id = self.read(1)
-      op = Packet(self.version)
-      op_packets = [op]
+      length_type_id = self.read(1)
 
-      if self.length_type_id == '0':
+      if length_type_id == '0':
         total_subpacket_length = self.read_int(15)
         logging.debug("Total subpacket length: {}".format(total_subpacket_length))
 
@@ -96,24 +137,22 @@ class Decoder:
 
         subpackets = Decoder(subpacket_string, mode='binary')
         subpackets.parse()
-        # TODO: do we need to adjust the read_position anywhere?
-        return op_packets + subpackets.packets
+        return [Packet(version, type_id, None, subpackets.packets)]
       else:
         # If the length type ID is 1, then the next 11 bits are a number that
         # represents the number of sub-packets immediately contained by this packet.
         number_of_subpackets = self.read_int(11)
         logging.debug("Begin parsing {} subpackets".format(number_of_subpackets))
+        subpackets = []
         for i in range(number_of_subpackets):
-          op_packets += self.parse_one_packet()
+          subpackets += self.parse_one_packet()
         logging.debug("Finished parsing subpackets from operator starting at {}".format(op_start))
-        return op_packets
+        return [Packet(version, type_id, None, subpackets)]
 
-for line in my_input:
-  d = Decoder(line, mode='hex')
-  d.parse()
-  version_sum = 0
-  for p in d.packets:
-    logging.info("Found a packet with version {}".format(p.version))
-    version_sum += p.version
+d = Decoder(my_input[0], mode='hex')
+d.parse()
 
-logging.info("Version sum: {}".format(version_sum))
+logging.info("Version sum: {}".format(d.packets[0].version_sum()))
+
+result = d.eval()
+logging.info("Result: {}".format(result))
