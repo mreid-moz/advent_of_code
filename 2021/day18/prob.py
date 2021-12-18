@@ -2,10 +2,10 @@ import logging
 import copy
 import re
 import sys
-from collections import defaultdict
+from collections import deque
 from functools import reduce
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 input_file = 'input'
 if len(sys.argv) >= 2:
@@ -24,6 +24,12 @@ class Pair:
     if self.left is None and self.right is None:
       return str(self.v)
     return f"[{self.left},{self.right}]"
+
+  def root(self):
+    current = self
+    while current.parent is not None:
+      current = current.parent
+    return current
 
 def parse(line):
   middle = -1
@@ -56,28 +62,50 @@ def parse(line):
   right.parent = p
   return p
 
-def get_first_left(pair, depth):
-  parent = pair.parent
-  for i in range(depth):
-    if parent is None:
-      return None
-    if parent.left.v is not None:
-      return parent.left
-    parent = parent.parent
+def get_neighbour(root, target, side='right'):
+  logging.debug(f"{root} -> Finding {side} neighbour of {target}")
+  if root is None:
+    return None
+  q = deque()
+  q.append(root)
+  while len(q) > 0:
+    logging.debug("Deque contained {}".format(" / ".join([str(n) for n in q])))
+    sz = len(q)
+    for i in range(sz):
+      p = q.popleft()
+      logging.debug(f"Checking if {p} == {target}")
+      if p == target:
+        logging.debug("it was")
+        if i == sz - 1:
+          logging.debug("but there wasn't anything good in the queue")
+          return None
+        neighbour = q.popleft()
+        logging.debug(f"Found {side} neighbour of {target}: {neighbour}")
+        return neighbour
+      if side == 'right':
+        if p.left:
+          logging.debug(f"enqueing left: {p.left}")
+          q.append(p.left)
+        if p.right:
+          logging.debug(f"enqueing right: {p.right}")
+          q.append(p.right)
+      else:
+        if p.right:
+          logging.debug(f"enqueing right: {p.right}")
+          q.append(p.right)
+        if p.left:
+          logging.debug(f"enqueing left: {p.left}")
+          q.append(p.left)
   return None
 
-def get_first_right(pair, depth):
-  logging.debug(f"Seeking a right for {pair}")
-  parent = pair.parent
-  for i in range(depth + 5):
-    if parent is None:
-      logging.debug(f"Hit the root, stopping")
-      return None
-    if parent.right.v is not None:
-      logging.debug(f"Found a right value: {parent.right}")
-      return parent.right
-    parent = parent.parent
-  return None
+def flatten(root):
+  flat = []
+  if root.left:
+    flat += flatten(root.left)
+  flat.append(root)
+  if root.right:
+    flat += flatten(root.right)
+  return flat
 
 def explode(pair, depth=0):
   logging.debug(f"exploding {pair} at depth {depth}")
@@ -87,36 +115,43 @@ def explode(pair, depth=0):
     # These will always be actual values
     left_value = pair.left.v
     right_value = pair.right.v
-
     parent = pair.parent
-    pair_is_parent_left = True
-    if parent.right == pair:
-      pair_is_parent_left = False
+    root = pair.root()
+    flat = flatten(root)
+    first_left = None
+    first_right = None
+    pair_idx = -1
+    for i, n in enumerate(flat):
+      logging.debug(f"Flattened[{i}] = {n}")
+      if n.v is not None and n != pair.left:
+        first_left = n
+      if n == pair:
+        pair_idx = i
+        break
 
-    first_left = get_first_left(pair, depth)
-    logging.debug(f"Pair: {pair}, first left: {first_left}")
+    for i in range(pair_idx + 2, len(flat)):
+      n = flat[i]
+      logging.debug(f"Flattened[{i}] = {n}")
+      if n.v is not None and n != pair.right:
+        first_right = n
+        break
+
+    logging.debug(f"Pair: {pair}, first left: {first_left}, first_right: {first_right}")
+
     if first_left is None:
       logging.debug("no value to the left")
-      parent.left = Pair(0, parent=parent)
     else:
       first_left.v += left_value
 
-    first_right = get_first_right(pair, depth)
-    logging.debug(f"Pair: {pair}, first right: {first_right}")
     if first_right is None:
       logging.debug("no value to the right")
-      parent.right = Pair(0, parent=parent)
     else:
       first_right.v += pair.right.v
 
-    if pair_is_parent_left:
-      logging.debug("pair is parent left")
-      if parent.left.v is not None:
-        parent.left = Pair(0, parent=parent)
+    if parent.left == pair:
+      parent.left = Pair(0, parent=parent)
     else:
-      logging.debug("pair is parent right")
-      if parent.right.v is not None:
-        parent.right = Pair(0, parent=parent)
+      parent.right = Pair(0, parent=parent)
 
     return True
   if pair.left is not None:
@@ -126,3 +161,9 @@ def explode(pair, depth=0):
     if explode(pair.right, depth+1):
       return True
   return False
+
+
+
+
+
+
