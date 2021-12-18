@@ -89,8 +89,9 @@ def explode(pair, depth=0):
     right_value = pair.right.v
 
     parent = pair.parent
-
-
+    pair_is_parent_left = True
+    if parent.right == pair:
+      pair_is_parent_left = False
 
     first_left = get_first_left(pair, depth)
     logging.debug(f"Pair: {pair}, first left: {first_left}")
@@ -98,10 +99,7 @@ def explode(pair, depth=0):
       logging.debug("no value to the left")
       parent.left = Pair(0, parent=parent)
     else:
-      if first_left == parent:
-        parent.left = Pair(first_left.v + pair.left.v, parent=parent)
-      else:
-        first_left.v += pair.left.v
+      first_left.v += left_value
 
     first_right = get_first_right(pair, depth)
     logging.debug(f"Pair: {pair}, first right: {first_right}")
@@ -109,13 +107,16 @@ def explode(pair, depth=0):
       logging.debug("no value to the right")
       parent.right = Pair(0, parent=parent)
     else:
-      if first_right == parent:
-        logging.debug("first right is parent")
-        parent.right = Pair(first_right.v + pair.right.v, parent=parent)
-      else:
-        logging.debug("first right is not parent")
-        first_right.v += pair.right.v
-        #parent.right = Pair(0, parent=parent)
+      first_right.v += pair.right.v
+
+    if pair_is_parent_left:
+      logging.debug("pair is parent left")
+      if parent.left.v is not None:
+        parent.left = Pair(0, parent=parent)
+    else:
+      logging.debug("pair is parent right")
+      if parent.right.v is not None:
+        parent.right = Pair(0, parent=parent)
 
     return True
   if pair.left is not None:
