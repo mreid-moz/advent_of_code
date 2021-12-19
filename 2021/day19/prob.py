@@ -132,8 +132,11 @@ class Scanner:
     self.beacons = []
     self.orientation = orientations[0]
 
-  def add(self, beacon):
-    self.beacons.append([int(n) for n in beacon.split(',')])
+  def add_line(self, beacon):
+    self.add([int(n) for n in beacon.split(',')])
+
+  def add(self, point):
+    self.beacons.append(point)
 
   def get_beacons(self):
     return [transform(b, self.orientation) for b in self.beacons]
@@ -144,31 +147,13 @@ class Scanner:
 
     diffs = defaultdict(int)
 
-    for my, their in zip(my_beacons, their_beacons):
-      offset = (my[0] - their[0], my[1] - their[1], my[2] - their[2])
-      diffs[offset] += 1
-      if diffs[offset] >= threshold:
-        return offset
-    #common_count = [0,0,0]
-    #offsets = [0,0,0]
-    #for n in range(3):
-    #  my_xs = [b[n] for b in my_beacons]
-    #  their_xs = [b[n] for b in their_beacons]
-    #  diffs = defaultdict(int)
-    #  for my,their in zip(my_xs, their_xs):
-    #    #logging.debug(f"Found a {n} diff of {my - their}")
-    #    diffs[my - their] += 1
-    #  for diff, count in diffs.items():
-    #    if count > common_count[n]:
-    #      common_count[n] = diff
-    #      offsets[n] = diff
-    #  common_count[n] = max(diffs.values())
-    #if (common_count[0] >= threshold and
-    #    common_count[1] >= threshold and
-    #    common_count[2] >= threshold):
-    #   return offsets
-    #else:
-    #  logging.debug(f"Common counts: {common_count}")
+    # they're not in order
+    for my in my_beacons:
+      for their in their_beacons:
+        offset = (my[0] - their[0], my[1] - their[1], my[2] - their[2])
+        diffs[offset] += 1
+        if diffs[offset] >= threshold:
+          return offset
     return None
 
 
@@ -183,30 +168,38 @@ for line in my_input:
     continue
   if len(line) == 0:
     continue
-  current_scanner.add(line)
+  current_scanner.add_line(line)
 
 logging.debug(f"Found {len(scanners)} scanners.")
 
 relative_scanner = scanners[0]
 
-for i, s2 in enumerate(scanners):
-  #for j, s2 in enumerate(scanners[i+1:]):
-  matchy = False
-  for k, orientation in enumerate(orientations):
-    s2.orientation = orientation
-    offsets = relative_scanner.get_offset(s2)
-    if offsets:
-      logging.debug(f"{relative_scanner.name} and {s2.name} are congruent in orientation {k} with offsets ({offsets})")
-      matchy = True
-      break
+remaining_scanners = scanners[1:]
+while remaining_scanners:
+  logging.debug(f"Looking through {len(remaining_scanners)} more scanners.")
+  for i, s in enumerate(remaining_scanners):
+    matchy = False
+    offsets = None
+    for k, orientation in enumerate(orientations):
+      s.orientation = orientation
+      offsets = relative_scanner.get_offset(s)
+      if offsets:
+        logging.debug(f"{relative_scanner.name} and {s.name} are congruent in orientation {k} with offsets ({offsets})")
+        matchy = True
+        break
+    if matchy:
+      done = remaining_scanners.pop(i)
+      xo, yo, zo = offsets
+      logging.debug(f"Adding beacons from {done.name}")
+      for x, y, z in done.get_beacons():
+        p = [x + xo, y + yo, z + zo]
+        if p not in relative_scanner.beacons:
+          relative_scanner.add(p)
+        else:
+          logging.debug(f"relative scanner already had a beacon at {p}")
     else:
-      logging.debug(f"{relative_scanner.name} and {s2.name} are not congruent in orientation {k}")
+      logging.debug(f"Could not find a matching orientation with {s.name}")
 
-
-#logging.info(f"Part 1: Final list: {root}, magnitude is {root.magnitude()}")
-
-#p = [1,2,3]
-#for k, orientation in enumerate(orientations):
-#  logging.info(f"{p} to {transform(p, orientation)}")
+logging.info(f"Part 1: Overall, found {len(relative_scanner.beacons)} beacons")
 
 
