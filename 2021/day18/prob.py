@@ -31,6 +31,12 @@ class Pair:
       current = current.parent
     return current
 
+  def magnitude(self):
+    if self.v is not None:
+      return self.v
+
+    return (self.left.magnitude() * 3) + (self.right.magnitude() * 2)
+
 def parse(line):
   middle = -1
   open_counter = 0
@@ -45,7 +51,6 @@ def parse(line):
 
   left = line[1:middle]
   right = line[middle+1:-1]
-  #logging.debug(f"{line} -> L: {left}, R: {right}")
 
   if re.match(r'[0-9]+', left):
     left = Pair(int(left))
@@ -62,42 +67,6 @@ def parse(line):
   right.parent = p
   return p
 
-def get_neighbour(root, target, side='right'):
-  logging.debug(f"{root} -> Finding {side} neighbour of {target}")
-  if root is None:
-    return None
-  q = deque()
-  q.append(root)
-  while len(q) > 0:
-    logging.debug("Deque contained {}".format(" / ".join([str(n) for n in q])))
-    sz = len(q)
-    for i in range(sz):
-      p = q.popleft()
-      logging.debug(f"Checking if {p} == {target}")
-      if p == target:
-        logging.debug("it was")
-        if i == sz - 1:
-          logging.debug("but there wasn't anything good in the queue")
-          return None
-        neighbour = q.popleft()
-        logging.debug(f"Found {side} neighbour of {target}: {neighbour}")
-        return neighbour
-      if side == 'right':
-        if p.left:
-          logging.debug(f"enqueing left: {p.left}")
-          q.append(p.left)
-        if p.right:
-          logging.debug(f"enqueing right: {p.right}")
-          q.append(p.right)
-      else:
-        if p.right:
-          logging.debug(f"enqueing right: {p.right}")
-          q.append(p.right)
-        if p.left:
-          logging.debug(f"enqueing left: {p.left}")
-          q.append(p.left)
-  return None
-
 def flatten(root):
   flat = []
   if root.left:
@@ -108,9 +77,8 @@ def flatten(root):
   return flat
 
 def explode(pair, depth=0):
-  logging.debug(f"exploding {pair} at depth {depth}")
   if depth == 4 and pair.v is None:
-    logging.debug("this one should explode.")
+    #logging.debug("this one should explode.")
 
     # These will always be actual values
     left_value = pair.left.v
@@ -118,11 +86,12 @@ def explode(pair, depth=0):
     parent = pair.parent
     root = pair.root()
     flat = flatten(root)
+    logging.debug("Flattened {} to {}".format(root, [str(n) for n in flat]))
     first_left = None
     first_right = None
     pair_idx = -1
     for i, n in enumerate(flat):
-      logging.debug(f"Flattened[{i}] = {n}")
+      #logging.debug(f"Flattened[{i}] = {n}")
       if n.v is not None and n != pair.left:
         first_left = n
       if n == pair:
@@ -131,12 +100,12 @@ def explode(pair, depth=0):
 
     for i in range(pair_idx + 2, len(flat)):
       n = flat[i]
-      logging.debug(f"Flattened[{i}] = {n}")
-      if n.v is not None and n != pair.right:
+      #logging.debug(f"Flattened[{i}] = {n}")
+      if n.v is not None:# and n != pair.right:
         first_right = n
         break
 
-    logging.debug(f"Pair: {pair}, first left: {first_left}, first_right: {first_right}")
+    #logging.debug(f"Pair: {pair}, first left: {first_left}, first_right: {first_right}")
 
     if first_left is None:
       logging.debug("no value to the left")
@@ -144,6 +113,7 @@ def explode(pair, depth=0):
       first_left.v += left_value
 
     if first_right is None:
+      logging.debug("Flat {}: {}".format(pair_idx, [str(n) for n in flat]))
       logging.debug("no value to the right")
     else:
       first_right.v += pair.right.v
@@ -163,7 +133,78 @@ def explode(pair, depth=0):
   return False
 
 
+def split(pair):
+  #logging.debug(f"splitting {pair}")
+  if pair.v is not None and pair.v >= 10:
+    #logging.debug("this one should split.")
+
+    new_left = pair.v // 2
+    new_right = new_left + (pair.v % 2)
+
+    logging.debug(f"Splitting {pair.v} into ({new_left},{new_right})")
+
+    pair.left = Pair(new_left, parent=pair)
+    pair.right = Pair(new_right, parent=pair)
+    pair.v = None
+    return True
+  if pair.left is not None:
+    if split(pair.left):
+      return True
+  if pair.right is not None:
+    if split(pair.right):
+      return True
+  return False
+
+def add(p1, p2):
+  p = Pair(left=p1, right=p2)
+  p1.parent = p
+  p2.parent = p
+  return p
+
+def reduce_snailfish(root):
+  while True:
+    logging.debug(f"Reducing {root}")
+    exploded = explode(root, 0)
+    if exploded:
+      logging.debug("exploded.")
+      continue
+    splitted = split(root)
+    if splitted:
+      logging.debug("splitted.")
+    if not splitted and not exploded:
+      break
+  logging.debug(f"After reducing: {root}")
 
 
+if __name__ == "__main__":
+  root = parse(my_input[0])
+  logging.debug(f"Starting snailfish: {root}")
+  for line in my_input[1:]:
+    next_snailfish = parse(line)
+    logging.debug(f"next snailfish: {next_snailfish}")
+    root = add(root, next_snailfish)
+    logging.debug(f"New snailfish: {root}")
+    reduce_snailfish(root)
+  logging.info(f"Part 1: Final list: {root}, magnitude is {root.magnitude()}")
 
+  big = 0
+  sailfishies = [parse(line) for line in my_input]
+  for i, line1 in enumerate(my_input):
+    for j, line2 in enumerate(my_input[i+1:]):
+      logging.info(f"Checking {i} + {j}")
+      added = add(parse(line1), parse(line2))
+      reduce_snailfish(added)
+      magnitude = added.magnitude()
+      if magnitude > big:
+        logging.info(f"Found a new max magnitude {magnitude} with {i} + {j}")
+        big = magnitude
 
+      logging.info(f"Checking {j} + {i}")
+      added = add(parse(line2), parse(line1))
+      reduce_snailfish(added)
+      magnitude = added.magnitude()
+      if magnitude > big:
+        logging.info(f"Found a new max magnitude {magnitude} with {j} + {i}")
+        big = magnitude
+
+  logging.info(f"Part 2: Max magnitude: {big}")
