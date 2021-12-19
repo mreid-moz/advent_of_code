@@ -172,9 +172,38 @@ for line in my_input:
 
 logging.debug(f"Found {len(scanners)} scanners.")
 
-relative_scanner = scanners[0]
+relative_scanner = None
+done = False
+for i, s1 in enumerate(scanners):
+  if done:
+    break
+  for j, s2 in enumerate(scanners[1:]):
+    matchy = False
+    offsets = None
+    for k, orientation in enumerate(orientations):
+      s2.orientation = orientation
+      offsets = s1.get_offset(s2)
+      if offsets:
+        logging.debug(f"{s1.name} and {s2.name} are congruent in orientation {k} with offsets ({offsets})")
+        matchy = True
+        break
+    if matchy:
+      if relative_scanner is None:
+        relative_scanner = s1
+      xo, yo, zo = offsets
+      logging.debug(f"Adding beacons from {s2.name}")
+      for x, y, z in s2.get_beacons():
+        p = [x + xo, y + yo, z + zo]
+        if p not in relative_scanner.beacons:
+          relative_scanner.add(p)
+        #else:
+        #  logging.debug(f"relative scanner already had a beacon at {p}")
+      done = True
+    else:
+      logging.debug(f"Could not find a matching orientation with anyone for {s1.name}")
 
-remaining_scanners = scanners[1:]
+
+remaining_scanners = [s for s in scanners if s != relative_scanner]
 while remaining_scanners:
   logging.debug(f"Looking through {len(remaining_scanners)} more scanners.")
   for i, s in enumerate(remaining_scanners):
@@ -195,8 +224,8 @@ while remaining_scanners:
         p = [x + xo, y + yo, z + zo]
         if p not in relative_scanner.beacons:
           relative_scanner.add(p)
-        else:
-          logging.debug(f"relative scanner already had a beacon at {p}")
+        #else:
+        #  logging.debug(f"relative scanner already had a beacon at {p}")
     else:
       logging.debug(f"Could not find a matching orientation with {s.name}")
 
