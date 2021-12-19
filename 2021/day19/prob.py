@@ -1,9 +1,7 @@
 import logging
-import copy
 import re
 import sys
 from collections import defaultdict
-from functools import reduce
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -157,78 +155,62 @@ class Scanner:
     return None
 
 
+def parse_scanners(some_input):
+  scanners = []
+  current_scanner = None
+  for line in some_input:
+    if re.search('scanner', line):
+      current_scanner = Scanner(line)
+      scanners.append(current_scanner)
+      continue
+    if len(line) == 0:
+      continue
+    current_scanner.add_line(line)
+  return scanners
 
-
-scanners = []
-current_scanner = None
-for line in my_input:
-  if re.search('scanner', line):
-    current_scanner = Scanner(line)
-    scanners.append(current_scanner)
-    continue
-  if len(line) == 0:
-    continue
-  current_scanner.add_line(line)
-
+scanners = parse_scanners(my_input)
 logging.debug(f"Found {len(scanners)} scanners.")
 
-relative_scanner = None
-done = False
-for i, s1 in enumerate(scanners):
-  if done:
-    break
-  for j, s2 in enumerate(scanners[1:]):
-    matchy = False
-    offsets = None
-    for k, orientation in enumerate(orientations):
-      s2.orientation = orientation
-      offsets = s1.get_offset(s2)
-      if offsets:
-        logging.debug(f"{s1.name} and {s2.name} are congruent in orientation {k} with offsets ({offsets})")
-        matchy = True
-        break
-    if matchy:
-      if relative_scanner is None:
-        relative_scanner = s1
-      xo, yo, zo = offsets
-      logging.debug(f"Adding beacons from {s2.name}")
-      for x, y, z in s2.get_beacons():
-        p = [x + xo, y + yo, z + zo]
-        if p not in relative_scanner.beacons:
-          relative_scanner.add(p)
-        #else:
-        #  logging.debug(f"relative scanner already had a beacon at {p}")
-      done = True
-    else:
-      logging.debug(f"Could not find a matching orientation with anyone for {s1.name}")
+def find_pair(some_scanners):
+  for i, s1 in enumerate(some_scanners):
+    for j, s2 in enumerate(some_scanners[i+1:]):
+      #logging.debug(f"Looking for matching pair between {i} and {j}")
+      for k, orientation in enumerate(orientations):
+        s2.orientation = orientation
+        offsets = s1.get_offset(s2)
+        if offsets:
+          logging.debug(f"{s1.name} and {s2.name} are congruent in orientation {k} with offsets {offsets}")
+          return s1, s2, offsets
+
+num_scanners = len(scanners)
+relative_matches = {}
+while len(relative_matches) < num_scanners:
+  logging.debug(f"So far found {len(relative_matches)} relative matches")
+  for i, s1 in enumerate(scanners):
+    for j, s2 in enumerate(scanners[i+1:]):
+      #logging.debug(f"Looking for matching pair between {i} and {j}")
+      for k, orientation in enumerate(orientations):
+        s2.orientation = orientation
+        offsets = s1.get_offset(s2)
+        if offsets:
+          logging.debug(f"{s1.name} and {s2.name} are congruent in orientation {k} with offsets {offsets}")
+          relative_matches[i] = {"match": j, "offsets": offsets, "backwards": False}
+          relative_matches[j] = {"match": i, "offsets": offsets, "backwards": True}
+          break
 
 
-remaining_scanners = [s for s in scanners if s != relative_scanner]
-while remaining_scanners:
-  logging.debug(f"Looking through {len(remaining_scanners)} more scanners.")
-  for i, s in enumerate(remaining_scanners):
-    matchy = False
-    offsets = None
-    for k, orientation in enumerate(orientations):
-      s.orientation = orientation
-      offsets = relative_scanner.get_offset(s)
-      if offsets:
-        logging.debug(f"{relative_scanner.name} and {s.name} are congruent in orientation {k} with offsets ({offsets})")
-        matchy = True
-        break
-    if matchy:
-      done = remaining_scanners.pop(i)
-      xo, yo, zo = offsets
-      logging.debug(f"Adding beacons from {done.name}")
-      for x, y, z in done.get_beacons():
-        p = [x + xo, y + yo, z + zo]
-        if p not in relative_scanner.beacons:
-          relative_scanner.add(p)
-        #else:
-        #  logging.debug(f"relative scanner already had a beacon at {p}")
-    else:
-      logging.debug(f"Could not find a matching orientation with {s.name}")
+for k, v in relative_matches.items():
+  if not v['backwards']:
+    logging.debug(f"Found a match between {k} and {v['match']}")
 
-logging.info(f"Part 1: Overall, found {len(relative_scanner.beacons)} beacons")
+
+reference_scanner = scanners[19]
+for scanner in scanners:
+  reference_scanner = scanner
+
+
+  logging.info(f"Part 1: Overall, found {len(scanners[0].beacons)} beacons starting from {scanner.name}")
+#for b in sorted(scanners[0].beacons):
+#  logging.debug(b)
 
 
