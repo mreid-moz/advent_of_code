@@ -208,33 +208,126 @@ def combine_scanners(scanners):
       seeds.append(scanners.pop())
   return seeds
 
-def reorient(s1, s2):
+def reorient_one(s1, s2):
+  for k in range(len(orientations)):
+    s2.orientation_idx = k
+    offsets = s1.get_offset(s2)
+    if offsets:
+      logging.debug(f"{s1.name} in orientation {s1.orientation_idx} is congruent to {s2.name} in orientation {s2.orientation_idx} with offsets {offsets}")
+      return offsets
+
+def reorient_both(s1, s2):
   for k1 in range(len(orientations)):
-    for k2 in range(len(orientations)):
-      s1.orientation_idx = k1
-      s2.orientation_idx = k2
-      offsets = s1.get_offset(s2)
-      if offsets:
-        #logging.debug(f"{s1.name} in orientation {k1} is congruent to {s2.name} in orientation {k2} with offsets {offsets}")
-        return offsets
+    s1.orientation_idx = k1
+    offsets = reorient_one(s1, s2)
+    if offsets:
+      #logging.debug(f"{s1.name} in orientation {k1} is congruent to {s2.name} in orientation {k2} with offsets {offsets}")
+      return offsets
   return None
 
 scanners = parse_scanners(my_input)
 logging.debug(f"Found {len(scanners)} scanners.")
 
-neighbours = defaultdict(list)
-for i, s1 in enumerate(scanners):
-  for j, s2 in enumerate(scanners):
-    if i == j:
-      continue
-    offsets = reorient(s1, s2)
-    if offsets:
-      logging.debug(f"{s1.name} in orientation {s1.orientation_idx} is congruent to {s2.name} in orientation {s2.orientation_idx} with offsets {offsets}")
-      neighbours[s1.name].append(s2.name)
+#neighbours = defaultdict(list)
+#for i, s1 in enumerate(scanners):
+#  for j, s2 in enumerate(scanners):
+#    if i == j:
+#      continue
+#    offsets = reorient_both(s1, s2)
+#    if offsets:
+#      logging.debug(f"{s1.name} in orientation {s1.orientation_idx} is congruent to {s2.name} in orientation {s2.orientation_idx} with offsets {offsets}")
+#      neighbours[s1.name].append(s2.name)
+#
+#for n, c in neighbours.items():
+#  logging.debug(f"Scanner {n} has {len(c)} neighbours: {c}")
 
-for n, c in neighbours.items():
-  logging.debug(f"Scanner {n} has {len(c)} neighbours: {c}")
+# Scanner s0 has 1 neighbours: ['s24']
+# Scanner s1 has 4 neighbours: ['s6', 's10', 's19', 's23']
+# Scanner s2 has 3 neighbours: ['s15', 's18', 's21']
+# Scanner s3 has 2 neighbours: ['s12', 's13']
+# Scanner s4 has 1 neighbours: ['s21']
+# Scanner s5 has 1 neighbours: ['s16']
+# Scanner s6 has 2 neighbours: ['s1', 's11']
+# Scanner s7 has 2 neighbours: ['s11', 's20']
+# Scanner s8 has 1 neighbours: ['s12']
+# Scanner s9 has 2 neighbours: ['s12', 's22']
+# Scanner s10 has 2 neighbours: ['s1', 's17']
+# Scanner s11 has 4 neighbours: ['s6', 's7', 's21', 's23']
+# Scanner s12 has 5 neighbours: ['s3', 's8', 's9', 's14', 's15']
+# Scanner s13 has 3 neighbours: ['s3', 's15', 's18']
+# Scanner s14 has 3 neighbours: ['s12', 's17', 's22']
+# Scanner s15 has 4 neighbours: ['s2', 's12', 's13', 's17']
+# Scanner s16 has 2 neighbours: ['s5', 's24']
+# Scanner s17 has 5 neighbours: ['s10', 's14', 's15', 's21', 's23']
+# Scanner s18 has 3 neighbours: ['s2', 's13', 's24']
+# Scanner s19 has 1 neighbours: ['s1']
+# Scanner s20 has 1 neighbours: ['s7']
+# Scanner s21 has 4 neighbours: ['s2', 's4', 's11', 's17']
+# Scanner s22 has 2 neighbours: ['s9', 's14']
+# Scanner s23 has 3 neighbours: ['s1', 's11', 's17']
+# Scanner s24 has 3 neighbours: ['s0', 's16', 's18']
 
+# herp derp..
 
+#path = [0, 24, 16, 18, 5, 2, 13, 15, 21, 3, 8, 9, 14, 12, 17, 4, 11, 22, 10, 23, 6, 7, 1, 20, 19]
+path = [0,
+         24,
+          16,
+           5,
+          18,
+           2,
+            15,
+             12,
+              3,
+              8,
+              9,
+               22,
+              14,
+             17,
+              10,
+               1,
+                6,
+                19,
+              23,
+            21,
+             4,
+             11,
+              6,
+              7,
+           13,
+]
 
-#logging.info("Max distance: {}".format(max(distances)))
+if input_file == 't1':
+  path = [0,1,2,3,4]
+
+positions = {"s0": (0,0,0)}
+
+reference_scanner = scanners[0]
+for p in path[1:]:
+  next_scanner = scanners[p]
+  offsets = reorient_one(reference_scanner, next_scanner)
+  if offsets is None:
+    logging.warning(f"Not able to combine {reference_scanner.name} and {next_scanner.name}")
+    #break
+  else:
+    logging.debug(f"able to combine {reference_scanner.name} and {next_scanner.name}")
+    xo, yo, zo = offsets
+    target_beacons = reference_scanner.get_beacons()
+    for x, y, z in next_scanner.get_beacons():
+      p = [x - xo, y - yo, z - zo]
+      if p not in target_beacons:
+        reference_scanner.add(p)
+        #logging.debug(f"Adding {p} to reference scanner")
+    positions[next_scanner.name] = offsets
+  #reference_scanner.orientation_idx = 0
+
+max_distance = 0
+position_list = list(positions.values())
+for i, a in enumerate(position_list):
+  for j, b in enumerate(position_list[i+1:]):
+    m = manhattan(a, b)
+    logging.debug(f"{a} to {b} is {m}")
+    if m > max_distance:
+      max_distance = m
+
+logging.info(f"Max distance: {max_distance}")
