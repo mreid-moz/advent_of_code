@@ -19,8 +19,12 @@ def get_field_value():
   #logging.debug(f"Getting default value for field of {FIELD_VALUE}")
   return FIELD_VALUE
 
+# It needs to stay the same for a given image.
 def get_new_image():
-  return defaultdict(get_field_value)
+  if FIELD_VALUE:
+    return defaultdict(lambda: 1)
+  else:
+    return defaultdict(lambda: 0)
 
 image = get_new_image()
 
@@ -59,18 +63,16 @@ def get_bits(image, row, col):
 def bits2num(bits):
   return int(''.join([str(b) for b in bits]), 2)
 
-def enhance(image, algo, coords):
+def enhance(image, algo):
   global FIELD_VALUE
 
-  min_row, max_row, min_col, max_col = coords
+  min_row, max_row, min_col, max_col = get_coords(image)
 
   # expand the image past the maxes
-  min_row -= 4
-  max_row += 4
-  min_col -= 4
-  max_col += 4
-
-  new_image = get_new_image()
+  min_row -= 2
+  max_row += 2
+  min_col -= 2
+  max_col += 2
 
   # check if we need to flip the field
   left_field = bits2num([FIELD_VALUE] * 9)
@@ -81,17 +83,19 @@ def enhance(image, algo, coords):
     FIELD_VALUE = new_field_value
     logging.debug(f"Testing that {image[(min_row-10,min_col-10)]} should be the field value of {FIELD_VALUE}")
 
+  new_image = get_new_image()
+
   for r in range(min_row, max_row + 1):
     for c in range(min_col, max_col + 1):
       bits = get_bits(image, r, c)
       idx = bits2num(bits)
       new_image[(r, c)] = algo[idx]
-  return new_image, (min_row, max_row, min_col, max_col)
+  return new_image
 
 def count_ones(image):
-  for (r, c), v in image.items():
-    if v:
-      logging.debug(f"Lit bit at {r},{c}")
+  #for (r, c), v in image.items():
+  #  if v:
+  #    logging.debug(f"Lit bit at {r},{c}")
   return sum(image.values())
 
 def print_image(image):
@@ -111,10 +115,9 @@ def print_image(image):
 logging.debug("initial image:")
 print_image(image)
 count_ones(image)
-coords = get_coords(image)
 
 for i in range(2):
-  image, coords = enhance(image, algo, coords)
+  image = enhance(image, algo)
   logging.debug(f"After {i+1} enhancements:")
   print_image(image)
 logging.info(f"After enhancing twice, found {count_ones(image)} lit bits.")
