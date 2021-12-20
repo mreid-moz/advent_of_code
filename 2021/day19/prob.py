@@ -134,6 +134,7 @@ class Scanner:
     self.name = name
     self.beacons = []
     self.orientation_idx = 0
+    self.position = (0,0,0)
 
   def add_line(self, beacon):
     self.add([int(n) for n in beacon.split(',')])
@@ -143,6 +144,15 @@ class Scanner:
 
   def get_beacons(self):
     return [transform(b, orientations[self.orientation_idx]) for b in self.beacons]
+
+  def get_position(self):
+    return self.position
+    return transform(self.position, orientations[self.orientation_idx])
+
+  def get_relative_position(self, p):
+    x, y, z = self.get_position()
+    px, py, pz = p
+    return (px - x, py - y, pz - z)
 
   def get_offset(self, other, threshold=12):
     my_beacons = self.get_beacons()
@@ -266,24 +276,23 @@ if input_file == 't1':
 
 positions = {"s0": (0,0,0)}
 
-reference_scanner = scanners[0]
+last_scanner = scanners[0]
 for p in path[1:]:
   next_scanner = scanners[p]
-  offsets = reorient_one(reference_scanner, next_scanner)
+  offsets = reorient_one(last_scanner, next_scanner)
   if offsets is None:
-    logging.warning(f"Not able to combine {reference_scanner.name} and {next_scanner.name}")
+    logging.warning(f"Not able to combine {last_scanner.name} and {next_scanner.name}")
     #break
   else:
-    logging.debug(f"able to combine {reference_scanner.name} and {next_scanner.name}")
-    xo, yo, zo = offsets
-    target_beacons = reference_scanner.get_beacons()
-    for x, y, z in next_scanner.get_beacons():
-      p = [x - xo, y - yo, z - zo]
-      if p not in target_beacons:
-        reference_scanner.add(p)
-        #logging.debug(f"Adding {p} to reference scanner")
-    positions[next_scanner.name] = offsets
-  #reference_scanner.orientation_idx = 0
+    relative_offsets = last_scanner.get_relative_position(offsets)
+    next_scanner.position = relative_offsets
+    logging.debug(f"relative offsets: {relative_offsets}, scanner_position = {next_scanner.get_position()}")
+    logging.debug(f"Able to combine {last_scanner.name} and {next_scanner.name}. Offsets {offsets} relative to {last_scanner.get_position()} -> {relative_offsets}")
+
+    positions[next_scanner.name] = relative_offsets
+  next_scanner.orientation_idx = 0
+  last_scanner = next_scanner
+  #last_scanner_pos = offsets
 
 max_distance = 0
 position_list = list(positions.values())
@@ -295,3 +304,4 @@ for i, a in enumerate(position_list):
       max_distance = m
 
 logging.info(f"Max distance: {max_distance}")
+
