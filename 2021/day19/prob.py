@@ -128,7 +128,7 @@ class Scanner:
   def __init__(self, name):
     self.name = name
     self.beacons = []
-    self.orientation = orientations[0]
+    self.orientation_idx = 0
 
   def add_line(self, beacon):
     self.add([int(n) for n in beacon.split(',')])
@@ -137,7 +137,7 @@ class Scanner:
     self.beacons.append(point)
 
   def get_beacons(self):
-    return [transform(b, self.orientation) for b in self.beacons]
+    return [transform(b, orientations[self.orientation_idx]) for b in self.beacons]
 
   def get_offset(self, other, threshold=12):
     my_beacons = self.get_beacons()
@@ -153,7 +153,6 @@ class Scanner:
         if diffs[offset] >= threshold:
           return offset
     return None
-
 
 def parse_scanners(some_input):
   scanners = []
@@ -178,8 +177,8 @@ def find_match(some_scanners, target):
   for i, s in enumerate(some_scanners):
     if s == target:
       continue
-    for k, orientation in enumerate(orientations):
-      s.orientation = orientation
+    for k in range(len(orientations)):
+      s.orientation_idx = k
       offsets = target.get_offset(s)
       if offsets:
         logging.debug(f"{target.name} and {s.name} are congruent in orientation {k} with offsets {offsets}")
@@ -222,6 +221,16 @@ while len(seeds) > 1:
   seeds = combine_scanners(seeds)
 
 logging.info(f"Part 1: Overall, found {len(seeds[0].beacons)} beacons starting from {seeds[0].name}")
+
+# At this point, are we all in the same orientation? No.
+
+for s1 in orig_scanners:
+  offsets = orig_scanners[24].get_offset(s1)
+  if offsets is None:
+    offsets = orig_scanners[16].get_offset(s1)
+
+  if offsets is None:
+    logging.debug(f"Didn't find offsets to 24 or 16 from {s1.name} which had {len(s1.beacons)} beacons and was in orientation {s1.orientation_idx}")
 
 # 24 -> 0         (-53, 1206, 62)
 # 24 -> 1         (1112, -4780, -1124)
