@@ -121,3 +121,7 @@ for i in range(2):
   logging.debug(f"After {i+1} enhancements:")
   print_image(image)
 logging.info(f"After enhancing twice, found {count_ones(image)} lit bits.")
+
+for i in range(48):
+  image = enhance(image, algo)
+logging.info(f"After enhancing 50 times, found {count_ones(image)} lit bits.")
