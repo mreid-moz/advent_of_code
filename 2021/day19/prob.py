@@ -172,42 +172,6 @@ def parse_scanners(some_input):
     current_scanner.add_line(line)
   return scanners
 
-def find_match(some_scanners, target):
-  for i, s in enumerate(some_scanners):
-    if s == target:
-      continue
-    for k in range(len(orientations)):
-      s.orientation_idx = k
-      offsets = target.get_offset(s)
-      if offsets:
-        logging.debug(f"{target.name} and {s.name} are congruent in orientation {k} with offsets {offsets}")
-        return s, offsets
-  return None, None
-
-def combine_scanners(scanners):
-  seeds = [scanners.pop()]
-  while True:
-    found = False
-    target = seeds[-1]
-    match, offsets = find_match(scanners, target)
-    if match is not None:
-      found = True
-      scanners.remove(match)
-      xo, yo, zo = offsets
-      logging.debug(f"Adding up to {len(match.beacons)} beacons from {match.name} to seed {target.name}")
-
-      target_beacons = target.get_beacons()
-      for x, y, z in match.get_beacons():
-        p = [x + xo, y + yo, z + zo]
-        if p not in target_beacons:
-          target.add(p)
-      logging.info(f"After combining beacons, target had {len(target.beacons)} beacons.")
-    if len(scanners) == 0:
-      break
-    if not found:
-      seeds.append(scanners.pop())
-  return seeds
-
 def reorient_one(s1, s2):
   for k in range(len(orientations)):
     s2.orientation_idx = k
@@ -298,7 +262,7 @@ path = [0,
 ]
 
 if input_file == 't1':
-  path = [0,1,2,3,4]
+  path = [0,1,4,2,3]
 
 positions = {"s0": (0,0,0)}
 
