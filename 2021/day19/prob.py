@@ -372,3 +372,40 @@ for i, s1 in enumerate(key_list):
 
 logging.info(f"Max distance: {max_distance}")
 
+
+scanners = parse_scanners(my_input)
+logging.debug(f"Resetting {len(scanners)} scanners.")
+
+positions = {"s0": (0,0,0)}
+ref_scanner = scanners.pop(0)
+ref_scanner.position = [0,0,0]
+
+while len(scanners) > 0:
+  for i, s1 in enumerate(scanners):
+    s = scanners[i]
+    offsets = reorient_one(ref_scanner, s)
+    if offsets is not None:
+      scanners.pop(i)
+      xo, yo, zo = offsets
+      for x, y, z in s.get_beacons():
+        b = [x + xo, y + yo, z + zo]
+        if b not in ref_scanner.beacons:
+          ref_scanner.beacons.append(b)
+      if s.name not in positions:
+        positions[s.name] = offsets
+
+logging.info(f"Num beacons: {len(ref_scanner.beacons)}")
+
+max_distance = 0
+key_list = sorted(list(positions.keys()))
+for i, s1 in enumerate(key_list):
+  for j, s2 in enumerate(key_list[i+1:]):
+    a = positions[s1]
+    b = positions[s2]
+    m = manhattan(a, b)
+    #logging.debug(f"{s1:<3} at {a} to {s2:<3} at {b} is {m}")
+    if m > max_distance:
+      max_distance = m
+
+logging.info(f"Max distance: {max_distance}")
+
