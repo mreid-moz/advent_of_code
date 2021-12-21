@@ -49,7 +49,6 @@ orientations = [
   [ 0, -1,  0, ],
   [ 0,  0,  1  ]],
 
-
  [[-1,  0,  0,],
   [ 0,  0, -1, ],
   [ 0, -1,  0  ]],
@@ -63,19 +62,19 @@ orientations = [
   [ 0,  1,  0  ]],
 
  [[ 0,  1,  0,],
-  [ 1,  0,  0, ],
+  [-1,  0,  0, ],
   [ 0,  0,  1  ]],
 
  [[ 0,  0,  1,],
-  [ 1,  0,  0, ],
+  [-1,  0,  0, ],
   [ 0, -1,  0  ]],
 
  [[ 0, -1,  0,],
-  [ 1,  0,  0, ],
+  [-1,  0,  0, ],
   [ 0,  0, -1  ]],
 
  [[ 0,  0, -1,],
-  [ 1,  0,  0, ],
+  [-1,  0,  0, ],
   [ 0,  1,  0  ]],
 
  [[ 0,  0, -1,],
@@ -128,6 +127,22 @@ def transform(point, orientation):
 
   return [x1, y1, z1]
 
+def undo_transform(point, orientation):
+  # Inverse of
+  #  [[ 1,  0,  0,],
+  #   [ 0,  0, -1, ],
+  #   [ 0,  1,  0  ]],
+  # is
+  #  [[ 1,  0,  0,],
+  #   [ 0,  0,  1, ],
+  #   [ 0, -1,  0  ]],
+  if orientation == orientations[1]:
+    return transform(point, orientations[3])
+  else:
+    logging.warning("Fail: Attempting to invert something smart!")
+    return None
+
+
 class Scanner:
   def __init__(self, name):
     self.name = name
@@ -140,6 +155,9 @@ class Scanner:
 
   def add(self, point):
     self.beacons.append(point)
+
+  def get_position(self):
+    return transform(self.position, orientations[self.orientation_idx])
 
   def get_beacons(self):
     return [transform(b, orientations[self.orientation_idx]) for b in self.beacons]
@@ -184,7 +202,7 @@ def reorient_one(s1, s2):
     s2.orientation_idx = k
     offsets = s1.get_offset(s2)
     if offsets:
-      #logging.debug(f"{s1.name} in orientation {s1.orientation_idx} is congruent to {s2.name} in orientation {s2.orientation_idx} with offsets {offsets}")
+      logging.debug(f"{s1.name} in orientation {s1.orientation_idx} is congruent to {s2.name} in orientation {s2.orientation_idx} with offsets {offsets}")
       return offsets
     #else:
     #  logging.debug(f"No match: {s1.name} o{s1.orientation_idx} doesn't match {s2.name} o{s2.orientation_idx}")
@@ -197,9 +215,6 @@ def reorient_both(s1, s2):
       #logging.debug(f"{s1.name} in orientation {k1} is congruent to {s2.name} in orientation {k2} with offsets {offsets}")
       return offsets
   return None
-
-scanners = parse_scanners(my_input)
-logging.debug(f"Found {len(scanners)} scanners.")
 
 #neighbours = defaultdict(list)
 #for i, s1 in enumerate(scanners):
@@ -286,49 +301,62 @@ if input_file == 't1':
             4,
            2]
 
-
-reference_scanner = scanners[path[0]]
-for p in path[1:]:
-  current_scanner = scanners[p]
-  offsets = reorient_both(reference_scanner, current_scanner)
-  if offsets is None:
-    logging.warning(f"Not able to combine {reference_scanner.name} and {current_scanner.name}")
-    #break
-  else:
-    xo, yo, zo = offsets
-    for x,y,z in current_scanner.get_beacons():
-      b = [x + xo, y + yo, z + zo]
-      if b not in reference_scanner.beacons:
-        reference_scanner.beacons.append(b)
-
-logging.info(f"Part 1: Found {len(reference_scanner.beacons)} beacons.")
+# # Part 1:
+#scanners = parse_scanners(my_input)
+#logging.debug(f"Found {len(scanners)} scanners.")
+# reference_scanner = scanners[path[0]]
+# for p in path[1:]:
+#   current_scanner = scanners[p]
+#   offsets = reorient_both(reference_scanner, current_scanner)
+#   if offsets is None:
+#     logging.warning(f"Not able to combine {reference_scanner.name} and {current_scanner.name}")
+#     #break
+#   else:
+#     xo, yo, zo = offsets
+#     for x,y,z in current_scanner.get_beacons():
+#       b = [x + xo, y + yo, z + zo]
+#       if b not in reference_scanner.beacons:
+#         reference_scanner.beacons.append(b)
+#
+# logging.info(f"Part 1: Found {len(reference_scanner.beacons)} beacons.")
 
 scanners = parse_scanners(my_input)
 logging.debug(f"Resetting {len(scanners)} scanners.")
 
 positions = {"s0": (0,0,0)}
 last_scanner = scanners[0]
-last_scanner.position = (0,0,0)
+last_scanner.position = [0,0,0]
 
 for p in path[1:]:
   next_scanner = scanners[p]
-  offsets = reorient_both(last_scanner, next_scanner)
+  prev_orientation = last_scanner.orientation_idx
+  offsets = reorient_one(last_scanner, next_scanner)
   if offsets is None:
     logging.warning(f"Not able to combine {last_scanner.name} and {next_scanner.name}")
     #break
   else:
     next_scanner.reorient()
+    #x0,y0,z0 = last_scanner.get_position()
     x0,y0,z0 = last_scanner.position
     x1,y1,z1 = offsets
     relative_pos = (x1 + x0, y1 + y0, z1 + z0)
+    if last_scanner.orientation_idx != prev_orientation:
+      #logging.debug(f"Last scanner orientation changed from {prev_orientation} to {last_scanner.orientation_idx}")
+      #logging.debug(f"It's position changed from {last_scanner.position} to {last_scanner.get_position()}")
+      if last_scanner.orientation_idx == 1:
+        #undone = undo_transform(last_scanner.get_position(), orientations[1])
+        relative_pos = undo_transform(relative_pos, orientations[1])
+        #logging.debug(f"Undoing set it back to {undone}")
+      else:
+        logging.warning("don't know how to undo this orientation change.")
     if next_scanner.position is None:
       next_scanner.position = relative_pos
     logging.debug(f"Scanner {last_scanner.name:<3} was at {last_scanner.position}, offsets to {next_scanner.name:<3} were {offsets}, relative position of {next_scanner.name}: {relative_pos}")
 
     if next_scanner.name not in positions:
       positions[next_scanner.name] = relative_pos
-    else:
-      logging.info(f"Skipping, not the first time we've seen {next_scanner.name}")
+    #else:
+    #  logging.info(f"Skipping, not the first time we've seen {next_scanner.name}")
   last_scanner = next_scanner
 
 max_distance = 0
@@ -338,7 +366,7 @@ for i, s1 in enumerate(key_list):
     a = positions[s1]
     b = positions[s2]
     m = manhattan(a, b)
-    logging.debug(f"{s1:<3} at {a} to {s2:<3} at {b} is {m}")
+    #logging.debug(f"{s1:<3} at {a} to {s2:<3} at {b} is {m}")
     if m > max_distance:
       max_distance = m
 
