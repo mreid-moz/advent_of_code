@@ -2,7 +2,7 @@ import logging
 import re
 import sys
 import copy
-from collections import defaultdict
+from collections import defaultdict, deque
 from functools import reduce
 import random
 
@@ -21,30 +21,6 @@ class Die:
 
     self.num_rolls += 1
     return self.last_roll
-
-  def roll3(self):
-    return (self.roll(), self.roll(), self.roll())
-
-class FixDie:
-  def __init__(self, val):
-    self.val = val
-    self.num_rolls = 0
-
-  def roll(self):
-    self.num_rolls += 1
-    return self.val
-
-  def roll3(self):
-    return (self.roll(), self.roll(), self.roll())
-
-class RanDie:
-  def __init__(self, val):
-    self.val = val
-    self.num_rolls = 0
-
-  def roll(self):
-    self.num_rolls += 1
-    return random.randint(1, self.val)
 
   def roll3(self):
     return (self.roll(), self.roll(), self.roll())
@@ -85,42 +61,15 @@ if example:
   p1_start = 4
   p2_start = 8
 
-#d = Die()
-#p1_score, p2_score = play(d, 1000, p1_start, p2_start)
-#loser = p2_score
-#if p1_score < p2_score:
-#  logging.debug(f"P2 won {p2_score}. P1 had {p1_score}.")
-#  loser = p1_score
-#logging.info(f"Loser {loser} x {d.num_rolls} rolls = {loser * d.num_rolls}")
-#
-#one_roller = FixDie(1)
-#p1_score, p2_score = play(one_roller, 21, p1_start, p2_start)
-#logging.info(f"with a die that always rolls one, it took {one_roller.num_rolls} rolls: P1={p1_score}, P2={p2_score}")
-#
-#two_roller = FixDie(2)
-#p1_score, p2_score = play(two_roller, 21, p1_start, p2_start)
-#logging.info(f"with a die that always rolls two, it took {two_roller.num_rolls} rolls: P1={p1_score}, P2={p2_score}")
-#
-#three_roller = FixDie(3)
-#p1_score, p2_score = play(three_roller, 21, p1_start, p2_start)
-#logging.info(f"with a die that always rolls three, it took {three_roller.num_rolls} rolls: P1={p1_score}, P2={p2_score}")
-#
-#dist = defaultdict(int)
-#p1_wins = 0
-#p2_wins = 0
-#iterations = 0
-#for i in range(iterations):
-#  rando_roller = RanDie(3)
-#  p1_score, p2_score = play(rando_roller, 21, p1_start, p2_start)
-#  if p1_score > p2_score:
-#    p1_wins += 1
-#  else:
-#    p2_wins += 1
-#  dist[rando_roller.num_rolls] += 1
-#
-#logging.info(f"After {iterations} iterations, player 1 won {p1_wins} and p2 won {p2_wins}")
-#for k in sorted(dist.keys()):
-#  logging.info(f"It took {k} rolls {dist[k]} times.")
+
+d = Die()
+p1_score, p2_score = play(d, 1000, p1_start, p2_start)
+loser = p2_score
+if p1_score < p2_score:
+  logging.debug(f"P2 won with {p2_score}. P1 had {p1_score}.")
+  loser = p1_score
+logging.info(f"Part 1: Loser {loser} x {d.num_rolls} rolls = {loser * d.num_rolls}")
+
 
 #             1                          2                          3
 #     /       |       \          /       |       \          /       |       \
@@ -129,37 +78,6 @@ if example:
 # 1  2  3  1  2  3  1  2  3  1  2  3  1  2  3  1  2  3  1  2  3  1  2  3  1  2  3
 # ...
 #  repeat between 15 and 27 times.
-
-
-class Player:
-  def __init__(self, name, pos, score=0):
-    self.name = name
-    self.pos = pos
-    self.score = 0
-    self.wins = 0
-
-  def move(self, roll):
-    new_position = self.pos + roll
-    if new_position > 10:
-      new_position -= 10
-    self.score += new_position
-    logging.debug(f"Moving {self.name} from {self.pos} + {roll} -> {new_position}, score={self.score}")
-    self.pos = new_position
-
-  def won(self):
-    if self.score >= 21:
-      return True
-    return False
-
-p1 = Player("p1", p1_start)
-p2 = Player("p2", p2_start)
-
-def apply_roll(name, player_position, roll, track_length=10):
-  new_position = player_position + roll
-  if new_position > track_length:
-    new_position -= track_length
-  logging.debug(f"Moving {name} {player_position} + {roll} -> {new_position}")
-  return new_position
 
 multipliers = {
   3: 1,
@@ -172,78 +90,6 @@ multipliers = {
 }
 
 three_roll_values = sorted(list(multipliers.keys()))
-#def check_recursive(p1_pos, p1_score, p2_pos, p2_score, rolls_so_far):
-#  if p1_score > 21 or p2_score > 21:
-#    multiplier = reduce((lambda x, y: x * y), [multipliers[r] for r in rolls_so_far])
-#  if p1_score > 21:
-#    logging.debug(f"Player 1 won after {rolls_so_far}, multiplier = {multiplier}")
-#    return multiplier, 0
-#  if p2_score > 21:
-#    logging.debug(f"Player 2 won after {rolls_so_far}, multiplier = {multiplier}")
-#    return 0, multiplier
-#
-#  p1_wins = 0
-#  p2_wins = 0
-#  for r in three_roll_values:
-#    if len(rolls_so_far) % 2 == 0:
-#      p1_pos = apply_roll('p1', p1_pos, r)
-#      p1_score += p1_pos
-#    else:
-#      p2_pos = apply_roll('p2', p2_pos, r)
-#      p2_score += p2_pos
-#    logging.debug(f"P1 score {p1_score}, P2: {p2_score}")
-#    (p1w, p2w) = check_recursive(p1_pos, p1_score, p2_pos, p2_score, rolls_so_far + [r])
-#    p1_wins += p1w
-#    p2_wins += p2w
-#  return p1_wins, p2_wins
-#
-#p1_wins, p2_wins = check_recursive(p1_start, 0, p2_start, 0, [])
-#
-#logging.info(f"Player 1 won {p1_wins}, player 2 won {p2_wins}")
-
-memo = {}
-
-def play_one(state, roll, modulo):
-  p1_pos, p1_score, p2_pos, p2_score = state
-
-  p1 = Player('p1', p1_pos, p1_score)
-  p2 = Player('p2', p2_pos, p2_score)
-
-  if modulo:
-    p2.move(roll)
-  else:
-    p1.move(roll)
-
-  return p1, p2
-
-
-def play(rolls):
-  t = tuple(rolls[:-1])
-  if t in memo:
-    #logging.info("cache hit")
-    p1, p2 = play_one(memo[t], rolls[-1], len(rolls) % 2)
-    memo[tuple(rolls)] = (p1.pos, p1.score, p2.pos, p2.score)
-    if p1.won():
-      return 'p1'
-    elif p2.won():
-      return 'p2'
-  else:
-    logging.info(f"cache miss {t}")
-
-  p1 = Player("p1", p1_start)
-  p2 = Player("p2", p2_start)
-  for i, r in enumerate(rolls):
-    if i % 2 == 0:
-      p1.move(r)
-    else:
-      p2.move(r)
-  memo[t] = (p1.pos, p1.score, p2.pos, p2.score)
-  if p1.won():
-    return 'p1'
-  if p2.won():
-    return 'p2'
-  return None
-
 
 class Game:
   def __init__(self, p1_pos, p2_pos):
@@ -290,9 +136,9 @@ games = [Game(p1_start, p2_start)]
 game_count = 0
 while games:
   game_count += 1
-  if game_count % 10000 == 0:
+  if game_count % 100000 == 0:
     logging.info(f"Played {game_count} games. So far: p1 {p1_wins}, p2 {p2_wins}. {len(games)} games in queue")
-  current_game = games.pop(0)
+  current_game = games.pop()
   logging.debug(current_game)
   winner = current_game.winner()
   if winner == 'p1':
