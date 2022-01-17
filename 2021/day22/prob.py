@@ -79,6 +79,7 @@ class Cuboid:
 
     return x_overlaps and y_overlaps and z_overlaps
 
+
 cuboids = []
 for line in my_input:
   cuboids.append(Cuboid(line))
@@ -93,10 +94,11 @@ for line in my_input:
 
 applied_cuboids = []
 
-def append_if(list, x1, x2, y1, y2, z1, z2):
+def append_if(list, a, b, x1, x2, y1, y2, z1, z2):
   c = Cuboid(0, x1, x2, y1, y2, z1, z2)
-  if c.volume() > 0:
-    list.append(c)
+  if c.overlaps(a) or c.overlaps(b):
+    if c.volume() > 0:
+      list.append(c)
 
 def split_two_overlapping(first, second):
   x1, x2, x3, x4 = sorted([first.x_min, first.x_max, second.x_min, second.x_max])
@@ -106,35 +108,35 @@ def split_two_overlapping(first, second):
   non_overlapping = []
   # From here, we make a bunch of new non-overlapping cubes, appending
   # only if they have non-zero volume.
-  append_if(non_overlapping, x1, x2, y1, y2, z1, z2)
-  append_if(non_overlapping, x1, x2, y1, y2, z2, z3)
-  append_if(non_overlapping, x1, x2, y1, y2, z3, z4)
-  append_if(non_overlapping, x1, x2, y2, y3, z1, z2)
-  append_if(non_overlapping, x1, x2, y2, y3, z2, z3)
-  append_if(non_overlapping, x1, x2, y2, y3, z3, z4)
-  append_if(non_overlapping, x1, x2, y3, y4, z1, z2)
-  append_if(non_overlapping, x1, x2, y3, y4, z2, z3)
-  append_if(non_overlapping, x1, x2, y3, y4, z3, z4)
+  append_if(non_overlapping, first, second, x1, x2, y1, y2, z1, z2)
+  append_if(non_overlapping, first, second, x1, x2, y1, y2, z2, z3)
+  append_if(non_overlapping, first, second, x1, x2, y1, y2, z3, z4)
+  append_if(non_overlapping, first, second, x1, x2, y2, y3, z1, z2)
+  append_if(non_overlapping, first, second, x1, x2, y2, y3, z2, z3)
+  append_if(non_overlapping, first, second, x1, x2, y2, y3, z3, z4)
+  append_if(non_overlapping, first, second, x1, x2, y3, y4, z1, z2)
+  append_if(non_overlapping, first, second, x1, x2, y3, y4, z2, z3)
+  append_if(non_overlapping, first, second, x1, x2, y3, y4, z3, z4)
 
-  append_if(non_overlapping, x2, x3, y1, y2, z1, z2)
-  append_if(non_overlapping, x2, x3, y1, y2, z2, z3)
-  append_if(non_overlapping, x2, x3, y1, y2, z3, z4)
-  append_if(non_overlapping, x2, x3, y2, y3, z1, z2)
-  append_if(non_overlapping, x2, x3, y2, y3, z2, z3)
-  append_if(non_overlapping, x2, x3, y2, y3, z3, z4)
-  append_if(non_overlapping, x2, x3, y3, y4, z1, z2)
-  append_if(non_overlapping, x2, x3, y3, y4, z2, z3)
-  append_if(non_overlapping, x2, x3, y3, y4, z3, z4)
+  append_if(non_overlapping, first, second, x2, x3, y1, y2, z1, z2)
+  append_if(non_overlapping, first, second, x2, x3, y1, y2, z2, z3)
+  append_if(non_overlapping, first, second, x2, x3, y1, y2, z3, z4)
+  append_if(non_overlapping, first, second, x2, x3, y2, y3, z1, z2)
+  append_if(non_overlapping, first, second, x2, x3, y2, y3, z2, z3)
+  append_if(non_overlapping, first, second, x2, x3, y2, y3, z3, z4)
+  append_if(non_overlapping, first, second, x2, x3, y3, y4, z1, z2)
+  append_if(non_overlapping, first, second, x2, x3, y3, y4, z2, z3)
+  append_if(non_overlapping, first, second, x2, x3, y3, y4, z3, z4)
 
-  append_if(non_overlapping, x3, x4, y1, y2, z1, z2)
-  append_if(non_overlapping, x3, x4, y1, y2, z2, z3)
-  append_if(non_overlapping, x3, x4, y1, y2, z3, z4)
-  append_if(non_overlapping, x3, x4, y2, y3, z1, z2)
-  append_if(non_overlapping, x3, x4, y2, y3, z2, z3)
-  append_if(non_overlapping, x3, x4, y2, y3, z3, z4)
-  append_if(non_overlapping, x3, x4, y3, y4, z1, z2)
-  append_if(non_overlapping, x3, x4, y3, y4, z2, z3)
-  append_if(non_overlapping, x3, x4, y3, y4, z3, z4)
+  append_if(non_overlapping, first, second, x3, x4, y1, y2, z1, z2)
+  append_if(non_overlapping, first, second, x3, x4, y1, y2, z2, z3)
+  append_if(non_overlapping, first, second, x3, x4, y1, y2, z3, z4)
+  append_if(non_overlapping, first, second, x3, x4, y2, y3, z1, z2)
+  append_if(non_overlapping, first, second, x3, x4, y2, y3, z2, z3)
+  append_if(non_overlapping, first, second, x3, x4, y2, y3, z3, z4)
+  append_if(non_overlapping, first, second, x3, x4, y3, y4, z1, z2)
+  append_if(non_overlapping, first, second, x3, x4, y3, y4, z2, z3)
+  append_if(non_overlapping, first, second, x3, x4, y3, y4, z3, z4)
 
   for o in non_overlapping:
     if o.overlaps(first):
