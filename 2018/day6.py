@@ -4,11 +4,11 @@ import logging
 import re
 import sys
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
-p = Puzzle(year=2018, day=6)
+puzz = Puzzle(year=2018, day=6)
 
-lines = p.input_data.splitlines()
+lines = puzz.input_data.splitlines()
 
 class Point:
   def __init__(self, x, y):
@@ -43,18 +43,15 @@ for p in points:
   if p.y > max_y:
     max_y = p.y
 
-print(f"Min x: {min_x}, max x: {max_x}, min_y = {min_y}, max_y = {max_y}")
+logging.debug(f"Min x: {min_x}, max x: {max_x}, min_y = {min_y}, max_y = {max_y}")
 
 map = []
-for i in range(max_x):
-  map.append([(None, 0, 0)] * max_y)
+for i in range(max_x + 1):
+  map.append([(None, 0, 0)] * (max_y + 1))
 
-for point in points:
-  map[point.x][point.y] = (point, 0, 1)
-
-for xi in range(min_x + 1, max_x):
-  for yi in range(min_y + 1, max_y):
-    print(f"checking ({xi},{yi})")
+for xi in range(min_x - 1, max_x):
+  for yi in range(min_y - 1, max_y):
+    logging.debug(f"checking ({xi},{yi})")
     curr_point, curr_dist, curr_count = map[xi][yi]
     pi = Point(xi, yi)
     for p in points:
@@ -69,19 +66,19 @@ for xi in range(min_x + 1, max_x):
         map[xi][yi] = (curr_point, curr_dist, curr_count)
 
 areas = defaultdict(int)
-for xi in range(min_x + 1, max_x):
-  for yi in range(min_y + 1, max_y):
+for xi in range(min_x - 1, max_x):
+  for yi in range(min_y - 1, max_y):
     curr_point, curr_dist, curr_count = map[xi][yi]
     if curr_count == 1:
       areas[str(curr_point)] += 1
 
 max_area = 0
 max_p = None
-for p, area in areas.items():
+for pt, area in areas.items():
   if area > max_area:
     max_area = area
-    max_p = p
+    max_p = pt
 
-print(f"largest area was around {max_p} of size {max_area}")
+logging.info(f"largest area was around {max_p} of size {max_area}")
 
-p.answer_a = max_area
+puzz.answer_a = max_area
