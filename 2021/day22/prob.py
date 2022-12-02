@@ -14,7 +14,6 @@ with open(input_file) as fin:
 consider_min = -50
 consider_max = 50
 
-
 def in_range_one(x):
   return x >= consider_min and x <= consider_max
 
@@ -79,137 +78,46 @@ class Cuboid:
 
     return x_overlaps and y_overlaps and z_overlaps
 
-
-cuboids = []
-for line in my_input:
-  cuboids.append(Cuboid(line))
-
-#cubes = defaultdict(int)
-#for cuboid in cuboids:
-#  cuboid.set(cubes)
-#
-#logging.info(f"cubes on: {sum(cubes.values())}")
-
-# part 2: do it by volume and intersection
-
-applied_cuboids = []
-
-def append_if(list, a, b, x1, x2, y1, y2, z1, z2):
-  c = Cuboid(0, x1, x2, y1, y2, z1, z2)
-  if c.overlaps(a) or c.overlaps(b):
-    if c.volume() > 0:
-      list.append(c)
-
-def split_two_overlapping(first, second):
-  x1, x2, x3, x4 = sorted([first.x_min, first.x_max, second.x_min, second.x_max])
-  y1, y2, y3, y4 = sorted([first.y_min, first.y_max, second.y_min, second.y_max])
-  z1, z2, z3, z4 = sorted([first.z_min, first.z_max, second.z_min, second.z_max])
-
-  non_overlapping = []
-  # From here, we make a bunch of new non-overlapping cubes, appending
-  # only if they have non-zero volume.
-  append_if(non_overlapping, first, second, x1, x2, y1, y2, z1, z2)
-  append_if(non_overlapping, first, second, x1, x2, y1, y2, z2, z3)
-  append_if(non_overlapping, first, second, x1, x2, y1, y2, z3, z4)
-  append_if(non_overlapping, first, second, x1, x2, y2, y3, z1, z2)
-  append_if(non_overlapping, first, second, x1, x2, y2, y3, z2, z3)
-  append_if(non_overlapping, first, second, x1, x2, y2, y3, z3, z4)
-  append_if(non_overlapping, first, second, x1, x2, y3, y4, z1, z2)
-  append_if(non_overlapping, first, second, x1, x2, y3, y4, z2, z3)
-  append_if(non_overlapping, first, second, x1, x2, y3, y4, z3, z4)
-
-  append_if(non_overlapping, first, second, x2, x3, y1, y2, z1, z2)
-  append_if(non_overlapping, first, second, x2, x3, y1, y2, z2, z3)
-  append_if(non_overlapping, first, second, x2, x3, y1, y2, z3, z4)
-  append_if(non_overlapping, first, second, x2, x3, y2, y3, z1, z2)
-  append_if(non_overlapping, first, second, x2, x3, y2, y3, z2, z3)
-  append_if(non_overlapping, first, second, x2, x3, y2, y3, z3, z4)
-  append_if(non_overlapping, first, second, x2, x3, y3, y4, z1, z2)
-  append_if(non_overlapping, first, second, x2, x3, y3, y4, z2, z3)
-  append_if(non_overlapping, first, second, x2, x3, y3, y4, z3, z4)
-
-  append_if(non_overlapping, first, second, x3, x4, y1, y2, z1, z2)
-  append_if(non_overlapping, first, second, x3, x4, y1, y2, z2, z3)
-  append_if(non_overlapping, first, second, x3, x4, y1, y2, z3, z4)
-  append_if(non_overlapping, first, second, x3, x4, y2, y3, z1, z2)
-  append_if(non_overlapping, first, second, x3, x4, y2, y3, z2, z3)
-  append_if(non_overlapping, first, second, x3, x4, y2, y3, z3, z4)
-  append_if(non_overlapping, first, second, x3, x4, y3, y4, z1, z2)
-  append_if(non_overlapping, first, second, x3, x4, y3, y4, z2, z3)
-  append_if(non_overlapping, first, second, x3, x4, y3, y4, z3, z4)
-
-  for o in non_overlapping:
-    if o.overlaps(first):
-      logging.debug(f"{o} overlaps first")
-      o.state = first.state
-    # second state overrides first state if second is contained within first.
-    if o.overlaps(second):
-      logging.debug(f"{o} overlaps second")
-      o.state = second.state
-
-  # Now put them in the same order as first,second
-  if first.state != second.state:
-    # Falses come first.
-    non_overlapping.sort(key=lambda x: x.state != first.state)
-  logging.debug(f"Split {first} and {second} into {len(non_overlapping)} non-overlapping cubes:")
-  for no in non_overlapping:
-    logging.debug(no)
-  # Only keep the "on" cubes
-  return [no for no in non_overlapping if no.state]
-
-def reconcile(cuboids):
-  logging.debug(f"Attempting to reconcile {len(cuboids)} cuboids")
-  if len(cuboids) == 0:
+  def minus(self, other, check_overlaps=True):
+    if check_overlaps:
+      if not self.overlaps(other):
+        return [self]
     return []
-  if len(cuboids) == 1:
-    return cuboids
-  if len(cuboids) == 2:
-    first, second = cuboids
-    return split_two_overlapping(first, second)
-
-  none_overlap = True
-  for c1 in cuboids:
-    for c2 in cuboids[1:]:
-      if c1.overlaps(c2):
-        none_overlap = False
-        break
-  if none_overlap:
-    return cuboids
-
-  first = cuboids.pop(0)
-  non_overlapping = []
-  overlapping = []
-  for c in cuboids:
-    if first.overlaps(c):
-      overlapping.append(c)
-    else:
-      non_overlapping.append(c)
-  de_overlapped = reconcile(overlapping)
-  others = reconcile(non_overlapping)
-  return de_overlapped + others
 
 
-## Next attempt:
-# if it's an on, find overlapping ons and find the diff, adding only the non-overlapping new on
-# if it's an off, find overlapping ons and subtract it from each one, re-adding leftover on bits
+if __name__ == "__main__":
+  cuboids = []
+  for line in my_input:
+    cuboids.append(Cuboid(line))
 
-for cuboid in cuboids:
-  overlapping_cuboids = []
-  for ac in applied_cuboids:
-    if ac.overlaps(cuboid):
-      overlapping_cuboids.append(ac)
-  logging.debug(f"Found {len(overlapping_cuboids)} cuboids that overlap {cuboid}")
-  for oc in overlapping_cuboids:
-    applied_cuboids.remove(oc)
-  overlapping_cuboids.append(cuboid)
-  reconciled = reconcile(overlapping_cuboids)
-  logging.debug(f"Reconciled to {len(reconciled)} cuboids")
-  applied_cuboids += reconciled
+  #cubes = defaultdict(int)
+  #for cuboid in cuboids:
+  #  cuboid.set(cubes)
+  #
+  #logging.info(f"cubes on: {sum(cubes.values())}")
 
-total_ons = 0
-for c in applied_cuboids:
-  if c.state == 1:
-    total_ons += c.volume()
+  # part 2: do it by volume and intersection
+  ## Next attempt:
+  # if it's an on, find overlapping ons and find the diff, adding only the non-overlapping new on
+  # if it's an off, find overlapping ons and subtract it from each one, re-adding leftover on bits
 
-logging.info(f"Total ons = {total_ons}")
+  for cuboid in cuboids:
+    overlapping_cuboids = []
+    for ac in applied_cuboids:
+      if ac.overlaps(cuboid):
+        overlapping_cuboids.append(ac)
+    logging.debug(f"Found {len(overlapping_cuboids)} cuboids that overlap {cuboid}")
+    for oc in overlapping_cuboids:
+      applied_cuboids.remove(oc)
+    overlapping_cuboids.append(cuboid)
+    reconciled = reconcile(overlapping_cuboids)
+    logging.debug(f"Reconciled to {len(reconciled)} cuboids")
+    applied_cuboids += reconciled
+
+  total_ons = 0
+  for c in applied_cuboids:
+    if c.state == 1:
+      total_ons += c.volume()
+
+  logging.info(f"Total ons = {total_ons}")
 
