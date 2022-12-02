@@ -44,5 +44,44 @@ for p in points:
     max_y = p.y
 
 print(f"Min x: {min_x}, max x: {max_x}, min_y = {min_y}, max_y = {max_y}")
-# p.answer_a = 10
 
+map = []
+for i in range(max_x):
+  map.append([(None, 0, 0)] * max_y)
+
+for point in points:
+  map[point.x][point.y] = (point, 0, 1)
+
+for xi in range(min_x + 1, max_x):
+  for yi in range(min_y + 1, max_y):
+    print(f"checking ({xi},{yi})")
+    curr_point, curr_dist, curr_count = map[xi][yi]
+    pi = Point(xi, yi)
+    for p in points:
+      p_dist = distance(p, pi)
+      if curr_point is None or p_dist < curr_dist:
+        curr_point = p
+        curr_dist = p_dist
+        curr_count = 1
+        map[xi][yi] = (curr_point, curr_dist, curr_count)
+      elif p_dist == curr_dist:
+        curr_count += 1
+        map[xi][yi] = (curr_point, curr_dist, curr_count)
+
+areas = defaultdict(int)
+for xi in range(min_x + 1, max_x):
+  for yi in range(min_y + 1, max_y):
+    curr_point, curr_dist, curr_count = map[xi][yi]
+    if curr_count == 1:
+      areas[str(curr_point)] += 1
+
+max_area = 0
+max_p = None
+for p, area in areas.items():
+  if area > max_area:
+    max_area = area
+    max_p = p
+
+print(f"largest area was around {max_p} of size {max_area}")
+
+p.answer_a = max_area
