@@ -49,36 +49,53 @@ map = []
 for i in range(max_x + 1):
   map.append([(None, 0, 0)] * (max_y + 1))
 
+skip_part_a = True
+
+if not skip_part_a:
+  for xi in range(min_x - 1, max_x):
+    for yi in range(min_y - 1, max_y):
+      logging.debug(f"checking ({xi},{yi})")
+      curr_point, curr_dist, curr_count = map[xi][yi]
+      pi = Point(xi, yi)
+      for p in points:
+        p_dist = distance(p, pi)
+        if curr_point is None or p_dist < curr_dist:
+          curr_point = p
+          curr_dist = p_dist
+          curr_count = 1
+          map[xi][yi] = (curr_point, curr_dist, curr_count)
+        elif p_dist == curr_dist:
+          curr_count += 1
+          map[xi][yi] = (curr_point, curr_dist, curr_count)
+
+  areas = defaultdict(int)
+  for xi in range(min_x - 1, max_x):
+    for yi in range(min_y - 1, max_y):
+      curr_point, curr_dist, curr_count = map[xi][yi]
+      if curr_count == 1:
+        areas[str(curr_point)] += 1
+
+  max_area = 0
+  max_p = None
+  for pt, area in areas.items():
+    if area > max_area:
+      max_area = area
+      max_p = pt
+
+  logging.info(f"largest area was around {max_p} of size {max_area}")
+
+  puzz.answer_a = max_area
+
+nears = 0
 for xi in range(min_x - 1, max_x):
   for yi in range(min_y - 1, max_y):
-    logging.debug(f"checking ({xi},{yi})")
-    curr_point, curr_dist, curr_count = map[xi][yi]
+    total_distance = 0
     pi = Point(xi, yi)
     for p in points:
-      p_dist = distance(p, pi)
-      if curr_point is None or p_dist < curr_dist:
-        curr_point = p
-        curr_dist = p_dist
-        curr_count = 1
-        map[xi][yi] = (curr_point, curr_dist, curr_count)
-      elif p_dist == curr_dist:
-        curr_count += 1
-        map[xi][yi] = (curr_point, curr_dist, curr_count)
+      total_distance += distance(p, pi)
+      if total_distance > 10000:
+        break
+    if total_distance < 10000:
+      nears += 1
 
-areas = defaultdict(int)
-for xi in range(min_x - 1, max_x):
-  for yi in range(min_y - 1, max_y):
-    curr_point, curr_dist, curr_count = map[xi][yi]
-    if curr_count == 1:
-      areas[str(curr_point)] += 1
-
-max_area = 0
-max_p = None
-for pt, area in areas.items():
-  if area > max_area:
-    max_area = area
-    max_p = pt
-
-logging.info(f"largest area was around {max_p} of size {max_area}")
-
-puzz.answer_a = max_area
+puzz.answer_b = nears
