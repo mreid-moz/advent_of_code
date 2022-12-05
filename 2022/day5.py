@@ -30,14 +30,24 @@ for line in lines:
     if len(line) > idx and line[idx] != ' ':
       stacks[i].insert(0, line[idx])
 
+# For part A, set to True
+one_at_a_time = False
 for count, from_stack, to_stack in instructions:
-  for i in range(count):
-    crate = stacks[from_stack].pop()
-    stacks[to_stack].append(crate)
+  if one_at_a_time:
+    for i in range(count):
+      crate = stacks[from_stack].pop()
+      stacks[to_stack].append(crate)
+  else:
+    crates = stacks[from_stack][-1*count:]
+    stacks[from_stack] = stacks[from_stack][0:len(stacks[from_stack]) - count]
+    stacks[to_stack] = stacks[to_stack] + crates
 
 tops = []
 for stack in stacks:
   if len(stack) > 0:
     tops.append(stack[-1])
 
-p.answer_a = "".join(tops)
+if one_at_a_time:
+  p.answer_a = "".join(tops)
+else:
+  p.answer_b = "".join(tops)
