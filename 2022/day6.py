@@ -1,15 +1,14 @@
 from aocd.models import Puzzle
-from collections import defaultdict
-import logging
-import re
-import sys
 
-logging.basicConfig(level=logging.DEBUG)
+def all_different(some_chars):
+  return len(set(some_chars)) == len(some_chars)
+
+def find_marker(signal, n):
+  for i in range(len(signal) - n):
+    if all_different(signal[i:i+n]):
+      return i + n
 
 p = Puzzle(year=2022, day=6)
-
-lines = p.input_data.splitlines()
-
-#...
-
-# p.answer_a = 10
+signal = p.input_data
+p.answer_a = find_marker(signal, 4)
+p.answer_b = find_marker(signal, 14)
