@@ -41,9 +41,8 @@ p_subdir = re.compile(r"^dir (.+)")
 p_file = re.compile(r"^(\d+) (.+)")
 
 class Directory:
-  def __init__(self, name, level):
+  def __init__(self, name):
     self.name = name
-    self.level = level
     self.size = 0
     self.subdirs = []
     self.parent = None
@@ -61,12 +60,7 @@ for line in lines:
     if dir_name == '..':
       pwd = pwd.parent
     else:
-      if pwd is None:
-        dir_level = 0
-      else:
-        dir_level = pwd.level + 1
-
-      new_wd = Directory(dir_name, dir_level)
+      new_wd = Directory(dir_name)
       if pwd is not None:
         new_wd.parent = pwd
         new_wd.path = pwd.path + '/' + dir_name
