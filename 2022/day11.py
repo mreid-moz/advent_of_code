@@ -50,6 +50,8 @@ class Monkey:
     self.true_monkey = None
     self.false_monkey = None
     self.business_count = 0
+    self.base_modulo = None
+    self.divide_by_three = False
 
   def add(self, old):
     return old + self.operation_value
@@ -62,8 +64,12 @@ class Monkey:
 
   def apply_operation(self, worry_level):
     new_worry_level = self.operation(worry_level)
-    logging.debug(f"{self.name}: worry level went from {worry_level} to {new_worry_level}, then reduced to {new_worry_level // 3}")
-    return new_worry_level // 3
+    if self.divide_by_three:
+      new_worry_level //= 3
+    else:
+      new_worry_level %= self.base_modulo
+    logging.debug(f"{self.name}: worry level went from {worry_level} to {new_worry_level}")
+    return new_worry_level
 
   def parse_operation(self):
     logging.debug(f"Parsing operation {self.operation}")
@@ -106,6 +112,8 @@ monkeys = {}
 monkey_list = []
 current_monkey = None
 
+PART_ONE = False
+
 for line in lines:
   if line.startswith("Monkey"):
     current_monkey = Monkey(line[:-1].lower()) # strip the ':', lowercase it.
@@ -127,25 +135,38 @@ for line in lines:
   else:
     logging.warning(f"Unexpected line: {line}")
 
+base_modulo = 1
 for monkey in monkey_list:
   monkey.parse_operation()
+  base_modulo *= monkey.divisible_by
+  if PART_ONE:
+    monkey.divide_by_three = True
 
-for i in range(20):
+for monkey in monkey_list:
+  monkey.base_modulo = base_modulo
+
+num_rounds = 10000
+if PART_ONE:
+  num_rounds = 20
+
+for i in range(num_rounds):
   for monkey in monkey_list:
     monkey.round()
   logging.info(f"After {i+1} rounds:")
-  for monkey in monkey_list:
-    logging.info(f"  {monkey.name}: {monkey.items}")
-
-top_monkey_business = 0
-second_monkey_business = 0
+  #for monkey in monkey_list:
+  #  logging.info(f"  {monkey.name}: {monkey.items}")
 
 for monkey in monkey_list:
-  logging.debug(f"{monkey.name} inspected {monkey.business_count} times")
-  if monkey.business_count > top_monkey_business:
-    second_monkey_business = top_monkey_business
-    top_monkey_business = monkey.business_count
+  logging.info(f"{monkey.name} inspected {monkey.business_count} times")
 
-logging.info(f"Monkey business: {top_monkey_business * second_monkey_business}")
+business = sorted([monkey.business_count for monkey in monkey_list])
+top_monkey_business = business[-1]
+second_monkey_business = business[-2]
+monkey_business = top_monkey_business * second_monkey_business
 
-p.answer_a = top_monkey_business * second_monkey_business
+logging.info(f"Monkey business: {monkey_business}")
+
+if PART_ONE:
+  p.answer_a = monkey_business
+else:
+  p.answer_b = monkey_business
