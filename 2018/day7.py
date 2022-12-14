@@ -1,5 +1,6 @@
 from aocd.models import Puzzle
 from collections import defaultdict
+from copy import deepcopy
 import logging
 import re
 import sys
@@ -45,6 +46,8 @@ for line in lines:
 final_order = []
 nodes = sorted(nodes)
 
+original_dependencies = deepcopy(dependencies)
+
 while len(final_order) < len(nodes):
   for node in nodes:
     if node in final_order:
@@ -63,3 +66,6 @@ while len(final_order) < len(nodes):
 
 logging.info(final_order)
 p.answer_a = "".join(final_order)
+
+workers = [None, None, None, None, None]
+seconds_elapsed = 0
