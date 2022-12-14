@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.DEBUG)
 p = Puzzle(year=2022, day=13)
 
 TEST = False
-TEST = True
+# TEST = True
 
 if TEST:
   lines = [
@@ -86,12 +86,15 @@ def compare(left, right):
         logging.debug("Not: right int was smaller")
         return False
       if not right and all_ints(left):
-       logging.debug("Ran out of items on the right, all ints on the left")
-       return left_item < right_item
+        logging.debug("Ran out of items on the right, all ints on the left")
+        if left_item < right_item:
+          return True
+        elif right_item < left_item:
+          return False
+        else:
+          logging.debug("SAME")
     else:
       # left int, right list
-      #if not compare([left_item], right_item):
-      #  return False
       return compare([left_item], right_item)
   else:
     # left list
@@ -105,12 +108,16 @@ def compare(left, right):
         lr = len(right_item)
         for i, l in enumerate(left_item):
           if i >= lr:
+            logging.debug("Not: ran out of items on the right")
             return False
-          if l < right_item[i]:
-            logging.info("found a lower int on the left")
-          if l > right_item[i]:
-            logging.info("not ordered: found a lower int on the right")
+          if l <= right_item[i]:
+            logging.debug("found a lower int on the left")
+            # this is ok, keep checking more items.
+          elif l > right_item[i]:
+            logging.debug("not ordered: found a lower int on the right")
             return False
+          else:
+            logging.warning("impossible!")
         return True
       # if not compare(left_item, right_item):
       #   return False
@@ -119,7 +126,7 @@ def compare(left, right):
 
   if not left and not right:
     # nothing left to check
-    logging.debug("Nothing left to check")
+    logging.debug("Ordered Nothing left to check")
     return True
   else:
     return compare(left, right)
