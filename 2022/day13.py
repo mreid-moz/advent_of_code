@@ -55,79 +55,73 @@ if TEST:
 else:
   lines = p.input_data.splitlines()
 
-
-def all_ints(mixed):
-  if not mixed:
-    return False
-  for item in mixed:
-    if not isinstance(item, int):
-      return False
-  return True
-
 def compare(left, right):
   logging.debug(f"Comparing {left} vs {right}")
+  if not left and not right:
+    logging.debug("Maybe: both empty")
+    return 0
   if not left and right:
     logging.debug("Ordered: left empty, right not empty")
-    return True
-
+    return 1
   if not right:
     logging.debug("Not: left not empty, right empty")
-    return False
+    return -1
+
   left_item = left.pop(0)
   right_item = right.pop(0)
+
+  logging.debug(f"comparing first item {left_item} to {right_item}")
   if isinstance(left_item, int):
     # left int
     if isinstance(right_item, int):
       # left int, right int
       if left_item < right_item:
-        logging.debug("Ordered: left int was smaller")
-        return True
+        logging.debug("Ordered: left < right")
+        return 1
+      elif left_item == right_item:
+        logging.debug("Same: left == right, keep looking!")
+        return compare(left, right)
       if right_item < left_item:
         logging.debug("Not: right int was smaller")
-        return False
-      if not right and all_ints(left):
-        logging.debug("Ran out of items on the right, all ints on the left")
-        if left_item < right_item:
-          return True
-        elif right_item < left_item:
-          return False
-        else:
-          logging.debug("SAME")
+        return -1
     else:
       # left int, right list
-      return compare([left_item], right_item)
+      logging.debug("Making left item into a list")
+      result = compare([left_item], right_item)
+      if result < 0:
+        logging.debug("Not: list compare not ordered")
+        return result
+      elif result > 0:
+        logging.debug("Ordered: list compare was ordered")
+        return result
+      else:
+        return compare(left, right)
   else:
     # left list
     if isinstance(right_item, int):
       # left list, right int
-      return compare(left_item, [right_item])
+      logging.debug("Making right item into a list")
+      result = compare(left_item, [right_item])
+      if result < 0:
+        return result
+      elif result > 0:
+        return result
+      else:
+        return compare(left, right)
     else:
       # left list, right list
-      if all_ints(left_item) and all_ints(right_item):
-        logging.debug("Comparing 2 int lists")
-        lr = len(right_item)
-        for i, l in enumerate(left_item):
-          if i >= lr:
-            logging.debug("Not: ran out of items on the right")
-            return False
-          if l <= right_item[i]:
-            logging.debug("found a lower int on the left")
-            # this is ok, keep checking more items.
-          elif l > right_item[i]:
-            logging.debug("not ordered: found a lower int on the right")
-            return False
-          else:
-            logging.warning("impossible!")
-        return True
-      # if not compare(left_item, right_item):
-      #   return False
-      return compare(left_item, right_item)
-
+      result = compare(left_item, right_item)
+      if result < 0:
+        return result
+      elif result > 0:
+        return result
+      else:
+        return compare(left, right)
 
   if not left and not right:
     # nothing left to check
-    logging.debug("Ordered Nothing left to check")
-    return True
+    logging.debug("Maybe: Nothing left to check")
+    return 0
   else:
     return compare(left, right)
 
@@ -145,7 +139,7 @@ ordered_indices = []
 for i in range(0, len(pairs)):
   left, right = pairs[i]
   result = "Not"
-  if compare(left, right):
+  if compare(left, right) == 1:
     result = "Ordered"
     ordered_indices.append(i+1)
   logging.debug(f"Pair {i+1}: {result}")
