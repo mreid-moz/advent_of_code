@@ -1,10 +1,10 @@
 from aocd.models import Puzzle
-from collections import defaultdict
 import logging
-import re
-import sys
+from copy import deepcopy
+import functools
+import json
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 p = Puzzle(year=2022, day=13)
 
@@ -36,21 +36,6 @@ if TEST:
     "",
     "[1,[2,[3,[4,[5,6,7]]]],8,9]",
     "[1,[2,[3,[4,[5,6,0]]]],8,9]",
-    "",
-    "[[0]]",
-    "[[1]]",
-    "",
-    "[[1]]",
-    "[[0]]",
-    "",
-    "[[0, 0]]",
-    "[[0, 1]]",
-    "",
-    "[[0, 1]]",
-    "[[1, 0]]",
-    "",
-    "[[0, 1]]",
-    "[[0, 0]]",
   ]
 else:
   lines = p.input_data.splitlines()
@@ -67,8 +52,8 @@ def compare(left, right):
     logging.debug("Not: left not empty, right empty")
     return -1
 
-  left_item = left.pop(0)
-  right_item = right.pop(0)
+  left_item = left[0]
+  right_item = right[0]
 
   logging.debug(f"comparing first item {left_item} to {right_item}")
   if isinstance(left_item, int):
@@ -80,7 +65,7 @@ def compare(left, right):
         return 1
       elif left_item == right_item:
         logging.debug("Same: left == right, keep looking!")
-        return compare(left, right)
+        return compare(left[1:], right[1:])
       if right_item < left_item:
         logging.debug("Not: right int was smaller")
         return -1
@@ -95,7 +80,7 @@ def compare(left, right):
         logging.debug("Ordered: list compare was ordered")
         return result
       else:
-        return compare(left, right)
+        return compare(left[1:], right[1:])
   else:
     # left list
     if isinstance(right_item, int):
@@ -107,7 +92,7 @@ def compare(left, right):
       elif result > 0:
         return result
       else:
-        return compare(left, right)
+        return compare(left[1:], right[1:])
     else:
       # left list, right list
       result = compare(left_item, right_item)
@@ -116,24 +101,26 @@ def compare(left, right):
       elif result > 0:
         return result
       else:
-        return compare(left, right)
+        return compare(left[1:], right[1:])
 
   if not left and not right:
     # nothing left to check
     logging.debug("Maybe: Nothing left to check")
     return 0
   else:
-    return compare(left, right)
+    return compare(left[1:], right[1:])
 
-pairs = []
+orig_pairs = []
 current_pair = []
 for line in lines:
   if line == '':
-    pairs.append(current_pair)
+    orig_pairs.append(current_pair)
     current_pair = []
   else:
-    current_pair.append(eval(line))
-pairs.append(current_pair)
+    current_pair.append(json.loads(line))
+orig_pairs.append(current_pair)
+
+pairs = deepcopy(orig_pairs)
 
 ordered_indices = []
 for i in range(0, len(pairs)):
@@ -148,3 +135,26 @@ logging.info(f"Sum of ordered indices: {sum(ordered_indices)}")
 
 if not TEST:
   p.answer_a = sum(ordered_indices)
+
+pairs = deepcopy(orig_pairs)
+
+# add dividers
+sentinel2 = [[2]]
+sentinel6 = [[6]]
+all_packets = [sentinel2, sentinel6]
+for left, right in pairs:
+  all_packets.append(left)
+  all_packets.append(right)
+
+sorted_packets = sorted(all_packets, key=functools.cmp_to_key(compare), reverse=True)
+
+decoder_key = 1
+for i, packet in enumerate(sorted_packets):
+  logging.debug(packet)
+  if packet == sentinel2 or packet == sentinel6:
+    decoder_key *= i+1
+
+logging.info(f"decoder key: {decoder_key}")
+
+if not TEST:
+  p.answer_b = decoder_key
