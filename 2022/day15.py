@@ -4,11 +4,12 @@ import logging
 import re
 import sys
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 puzz = Puzzle(year=2022, day=15)
 
 pattern = re.compile(r"Sensor at x=(-?\d+), y=(-?\d+): closest beacon is at x=(-?\d+), y=(-?\d+)")
+
 TEST = True
 
 if TEST:
@@ -36,6 +37,7 @@ min_y = None
 max_x = None
 max_y = None
 
+cave = {}
 sensors = {}
 beacons = set()
 for line in lines:
@@ -58,6 +60,8 @@ for line in lines:
   logging.debug(f"Sensor at {sx},{sy} sees beacon at {bx},{by}")
   sensors[(sx,sy)] = (bx,by)
   beacons.add((bx, by))
+  cave[(sx,sy)] = 'S'
+  cave[(bx,by)] = 'B'
 
 if TEST:
   target_line = 10
@@ -70,9 +74,9 @@ def mark_sensor_area(cave, sx, sy, bx, by):
   cave[(bx, by)] = 'B'
   distance = abs(sx - bx) + abs(sy - by)
   for yd in range(distance+1):
-    logging.debug(f"Filling row {sx-yd} and {sx+yd}")
+    logging.debug(f"Filling row {sy-yd} and {sy+yd}")
     for y in [sy + yd, sy - yd]:
-      for x in range(sx - distance + y, sx + distance - y + 1):
+      for x in range(sx - distance + yd, sx + distance - yd + 1):
         logging.debug(f"Filling {x},{y}")
         if (x, y) not in cave:
           cave[x, y] = '#'
@@ -90,31 +94,31 @@ def print_cave(cave):
 
 logging.debug(f"min x: {min_x}, max x: {max_x}; min y: {min_y}, max y: {max_y}")
 
-cave = {}
-# Add any beacons in the target line
-for bx, by in beacons:
-  if by == target_line:
-    cave[(bx, by)] = 'B'
+# print_cave(cave)
 
-print_cave(cave)
+logging.debug(f"Found {len(sensors)} sensors.")
 
-for row_delta in range(((max_x - min_x) // 2) + 2):
-  # fill target + / - row_delta
-  x_start = min_x + row_delta
-  x_end = max_x - row_delta
-  if x_end < x_start:
-    continue
+for (sx, sy), (bx, by) in sensors.items():
+  logging.info(f"filling cave based on sensor at {sx},{sy}")
+  mark_sensor_area(cave, sx, sy, bx, by)
 
-  for y in [target_line - row_delta, target_line + row_delta]:
-    logging.debug(f"searching row {y} from x {x_start} to {x_end}")
-    # Find all sensors in that range
-    for x in range(x_start, x_end + 1):
-      if (x, y) in sensors:
-        bx, by = sensors[(x,y)]
-        logging.debug(f"Found a sensor at {x},{y} with beacon at {bx},{by}")
-        # Fill the map from each sensor
-        mark_sensor_area(cave, x, y, bx, by)
-        print_cave(cave)
+# for row_delta in range(((max_x - min_x) // 2) + 2):
+#   # fill target + / - row_delta
+#   x_start = min_x + row_delta
+#   x_end = max_x - row_delta
+#   if x_end < x_start:
+#     continue
+
+#   for y in [target_line - row_delta, target_line + row_delta]:
+#     logging.debug(f"searching row {y} from x {x_start} to {x_end}")
+#     # Find all sensors in that range
+#     for x in range(x_start, x_end + 1):
+#       if (x, y) in sensors:
+#         bx, by = sensors[(x,y)]
+#         logging.debug(f"Found a sensor at {x},{y} with beacon at {bx},{by}")
+#         # Fill the map from each sensor
+#         mark_sensor_area(cave, x, y, bx, by)
+#         # print_cave(cave)
 
 no_beacon_count = 0
 for (kx, ky), v in cave.items():
