@@ -68,18 +68,19 @@ if TEST:
 else:
   target_line = 2000000
 
-def mark_sensor_area(cave, sx, sy, bx, by):
+def mark_sensor_area(cave, sx, sy, bx, by, target_line):
   logging.debug(f"filling area around {sx},{sy} with beacon at {bx},{by}")
-  cave[(sx, sy)] = 'S'
-  cave[(bx, by)] = 'B'
   distance = abs(sx - bx) + abs(sy - by)
-  for yd in range(distance+1):
-    logging.debug(f"Filling row {sy-yd} and {sy+yd}")
-    for y in [sy + yd, sy - yd]:
-      for x in range(sx - distance + yd, sx + distance - yd + 1):
-        logging.debug(f"Filling {x},{y}")
-        if (x, y) not in cave:
-          cave[x, y] = '#'
+  target_line_distance = abs(sy - target_line)
+  if target_line_distance > distance:
+    return
+
+  y = target_line
+  logging.debug(f"Filling row {y}")
+  for x in range(sx - distance + target_line_distance, sx + distance - target_line_distance + 1):
+    logging.debug(f"Filling {x},{y}")
+    if (x, y) not in cave:
+      cave[x, y] = '#'
 
 def print_cave(cave):
   print(f"x: {min_x} to {max_x}")
@@ -100,25 +101,7 @@ logging.debug(f"Found {len(sensors)} sensors.")
 
 for (sx, sy), (bx, by) in sensors.items():
   logging.info(f"filling cave based on sensor at {sx},{sy}")
-  mark_sensor_area(cave, sx, sy, bx, by)
-
-# for row_delta in range(((max_x - min_x) // 2) + 2):
-#   # fill target + / - row_delta
-#   x_start = min_x + row_delta
-#   x_end = max_x - row_delta
-#   if x_end < x_start:
-#     continue
-
-#   for y in [target_line - row_delta, target_line + row_delta]:
-#     logging.debug(f"searching row {y} from x {x_start} to {x_end}")
-#     # Find all sensors in that range
-#     for x in range(x_start, x_end + 1):
-#       if (x, y) in sensors:
-#         bx, by = sensors[(x,y)]
-#         logging.debug(f"Found a sensor at {x},{y} with beacon at {bx},{by}")
-#         # Fill the map from each sensor
-#         mark_sensor_area(cave, x, y, bx, by)
-#         # print_cave(cave)
+  mark_sensor_area(cave, sx, sy, bx, by, target_line)
 
 no_beacon_count = 0
 for (kx, ky), v in cave.items():
