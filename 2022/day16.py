@@ -3,6 +3,7 @@ from collections import defaultdict
 import logging
 import re
 import sys
+from copy import deepcopy
 
 pattern = re.compile(r"Valve ([A-Z]+) has flow rate=(\d+); tunnel leads to valve (.+)")
 pattern2 = re.compile(r"Valve ([A-Z]+) has flow rate=(\d+); tunnels lead to valves (.+)")
@@ -10,7 +11,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 puzz = Puzzle(year=2022, day=16)
 
-TEST = True
+TEST = False
 
 if TEST:
   lines = [
@@ -161,6 +162,25 @@ class PathMemo:
     self.flow = flow
     self.steps = steps
 
+  def move(self, next_me, next_elephant):
+    if self.me == next_me:
+      self.valves_on.add(self.me)
+    if self.elephant == next_elephant:
+      self.valves_on.add(self.elephant)
+
+    for v in self.valves_on:
+      self.flow += valves[v].flow_rate
+
+    self.me = next_me
+    self.elephant = next_elephant
+    self.full_path.append(self.me)
+    self.full_path.append(self.elephant)
+
+  def copy(self):
+    c = PathMemo(self.me, self.elephant, deepcopy(self.valves_on), self.flow, self.steps)
+    c.full_path = deepcopy(self.full_path)
+    return c
+
   def __str__(self):
     return f"Me: {self.me}, E: {self.elephant}, Flow: {self.flow}, steps: {self.steps}, valves: {self.valves_on}, full_path: {self.full_path}"
 
@@ -207,11 +227,8 @@ if TEST:
       next_me = example_flow[i * 2]
       next_elephant = example_flow[(i * 2) + 1]
 
-      new_flow, new_valves_on = compute_memo_flow(pm, next_me, next_elephant)
-      new_path = PathMemo(next_me, next_elephant, new_valves_on, new_flow, pm.steps + 1)
-      new_path.full_path = pm.full_path + new_path.full_path
-      logging.debug(new_path)
-      pm = new_path
+      pm.move(next_me, next_elephant)
+      logging.debug(pm)
     logging.info(f"memo flow was {pm.flow}")
 
 
@@ -224,19 +241,11 @@ while step_num < 25:
   step_num += 1
   new_paths = []
   for path in paths:
-    #if len(path.valves_on) == len(valves):
-    #  # nothing left to turn on, stay in once place
-    #  new_flow, new_valves_on = compute_memo_flow(path, path.me, path.elephant)
-    #  new_path = PathMemo(path.me, path.elephant, new_valves_on, new_flow, path.steps + 1)
-    #  new_path.full_path = path.full_path + new_path.full_path
-    #  new_paths.append(new_path)
-    #  continue
-    logging.debug(f"Computing next paths from {path.full_path}")
+    # logging.debug(f"Computing next paths from {path.full_path}")
     for next_me in valves[path.me].tunnels + [path.me]:
       for next_elephant in valves[path.elephant].tunnels + [path.elephant]:
-        new_flow, new_valves_on = compute_memo_flow(path, next_me, next_elephant)
-        new_path = PathMemo(next_me, next_elephant, new_valves_on, new_flow, path.steps + 1)
-        new_path.full_path = path.full_path + new_path.full_path
+        new_path = path.copy()
+        new_path.move(next_me, next_elephant)
         new_paths.append(new_path)
   paths = new_paths
   num_paths = len(paths)
@@ -246,12 +255,12 @@ while step_num < 25:
   if num_paths > 10000:
     paths.sort(key=lambda x: x.flow)
     logging.info(f"worst: {paths[0].flow}, best: {paths[-1].flow}")
-    logging.info(f"worst: {paths[0]}")
-    logging.info(f"best: {paths[-1]}")
+    # logging.info(f"worst: {paths[0]}")
+    # logging.info(f"best: {paths[-1]}")
     paths = paths[-10000:]
-    logging.info(f"worst: {paths[0].flow}, best: {paths[-1].flow}")
-    logging.info(f"worst: {paths[0]}")
-    logging.info(f"best: {paths[-1]}")
+    # logging.info(f"worst: {paths[0].flow}, best: {paths[-1].flow}")
+    # logging.info(f"worst: {paths[0]}")
+    # logging.info(f"best: {paths[-1]}")
 
 best_path = None
 best_flow = 0
@@ -262,5 +271,5 @@ for p in paths:
 
 logging.info(f"Best flow: {best_flow}")
 logging.info(f"Best path: {best_path}")
-# if not TEST:
-#   puzz.answer_b = best_flow
+if not TEST:
+  puzz.answer_b = best_flow
