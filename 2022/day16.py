@@ -83,6 +83,7 @@ if TEST:
   logging.debug(f"computing flow for example {example_flow}")
   logging.debug(f"flow was {compute_flow(example_flow)}")
 
+# Part one:
 # paths = [['AA']]
 # step_num = 0
 # while step_num < 29:
@@ -141,21 +142,8 @@ def compute_elephant_flow(path, max_steps=26):
     logging.debug(f"Flow was {flow}")
   return flow
 
-def compute_memo_flow(path, next_me, next_elephant):
-  valves_on = path.valves_on
-  if path.me == next_me:
-    valves_on.add(next_me)
-  if path.elephant == next_elephant:
-    valves_on.add(next_elephant)
-  flow = path.flow
-  for v in valves_on:
-    flow += valves[v].flow_rate
-  return flow, valves_on
-
-
 class PathMemo:
   def __init__(self, me, elephant, valves_on, flow=0, steps=0):
-    self.full_path = [me, elephant]
     self.valves_on = valves_on
     self.me = me
     self.elephant = elephant
@@ -173,16 +161,13 @@ class PathMemo:
 
     self.me = next_me
     self.elephant = next_elephant
-    self.full_path.append(self.me)
-    self.full_path.append(self.elephant)
 
   def copy(self):
     c = PathMemo(self.me, self.elephant, deepcopy(self.valves_on), self.flow, self.steps)
-    c.full_path = deepcopy(self.full_path)
     return c
 
   def __str__(self):
-    return f"Me: {self.me}, E: {self.elephant}, Flow: {self.flow}, steps: {self.steps}, valves: {self.valves_on}, full_path: {self.full_path}"
+    return f"Me: {self.me}, E: {self.elephant}, Flow: {self.flow}, steps: {self.steps}, valves: {self.valves_on}"
 
 
 if TEST:
@@ -232,35 +217,33 @@ if TEST:
     logging.info(f"memo flow was {pm.flow}")
 
 
-# Next optimization: keep the last position, "on" valves, and current flow total (rather than the whole path) or memoize
-# Also: stop paths when all valves are open.
-
 paths = [PathMemo('AA', 'AA', set(), 0, 0)]
 step_num = 0
 while step_num < 25:
   step_num += 1
   new_paths = []
   for path in paths:
-    # logging.debug(f"Computing next paths from {path.full_path}")
     for next_me in valves[path.me].tunnels + [path.me]:
+      if next_me == path.me:
+        if valves[next_me].flow_rate == 0 or next_me in path.valves_on:
+          # don't tarry in rooms with no flow or already on
+          continue
       for next_elephant in valves[path.elephant].tunnels + [path.elephant]:
+        if next_elephant == path.elephant:
+          if valves[next_elephant].flow_rate == 0 or next_elephant in path.valves_on:
+            # don't tarry in rooms with no flow or already on
+            continue
         new_path = path.copy()
         new_path.move(next_me, next_elephant)
         new_paths.append(new_path)
   paths = new_paths
   num_paths = len(paths)
   logging.info(f"After {step_num} steps, we have {num_paths} to consider")
-  # logging.info(f"one of them is {paths[-1]}")
   # keep the best paths
-  if num_paths > 10000:
+  if num_paths > 150000: # brute force, but not tooo brute force.
     paths.sort(key=lambda x: x.flow)
     logging.info(f"worst: {paths[0].flow}, best: {paths[-1].flow}")
-    # logging.info(f"worst: {paths[0]}")
-    # logging.info(f"best: {paths[-1]}")
-    paths = paths[-10000:]
-    # logging.info(f"worst: {paths[0].flow}, best: {paths[-1].flow}")
-    # logging.info(f"worst: {paths[0]}")
-    # logging.info(f"best: {paths[-1]}")
+    paths = paths[-150000:]
 
 best_path = None
 best_flow = 0
