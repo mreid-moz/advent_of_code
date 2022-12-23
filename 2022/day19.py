@@ -35,6 +35,9 @@ class Blueprint:
     self.costs['obsidian'] = (int(m.group(4)), int(m.group(5)), 0)
     self.costs['geode'] = (int(m.group(6)), 0, int(m.group(6)))
 
+class Session:
+  def __init__(self, blueprint):
+    self.blueprint = blueprint
     self.robots = defaultdict(int)
     self.robots['ore'] = 1
 
@@ -44,4 +47,7 @@ blueprints = []
 for line in lines:
   logging.debug(line)
   blueprints.append(Blueprint(line))
+
+def max_geodes(blueprint):
+
 # puzz.answer_a = 10
