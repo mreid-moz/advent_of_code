@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 p = Puzzle(year=2022, day=24)
 
 TEST = True
-# TEST = False
+TEST = False
 
 if TEST:
   lines = [
@@ -97,9 +97,6 @@ def sort_path(path):
 
 grid = []
 
-initial_position = (0,-1)
-goal_position = (len(lines[-1]) - 3, len(lines) - 2)
-
 for i, line in enumerate(lines[1:-1]):
   grid.append([])
   for blizz in line[1:-1]:
@@ -113,19 +110,21 @@ print_grid(grid)
 
 def seek(grid, start_pos, goal_pos):
   goal_row, goal_col = goal_pos
+  start_row, start_col = start_pos
   all_paths = [[start_pos]]
-  shortest_path = None
   i = 0
-  while shortest_path is None:
+  while True:
     i += 1
-    logging.info(f"Minute {i}:")
+    if i % 20 == 0:
+      logging.info(f"Minute {i}:")
     grid = evolve(grid)
     if TEST:
       print_grid(grid)
     new_paths = []
     # Keep just one path per distinct endpoint - any of them will do.
     ends = set()
-    logging.info(f"Looking at {len(all_paths)} paths of length {len(all_paths[0])}")
+    if i % 20 == 0:
+      logging.info(f"Looking at {len(all_paths)} paths of length {len(all_paths[0])}")
     for path in all_paths:
       logging.debug(f"Looking at path {path}")
       cr, cc = path[-1]
@@ -134,7 +133,10 @@ def seek(grid, start_pos, goal_pos):
           # done!
           shortest_path = len(path)
           logging.info(f"Shortest path: {shortest_path} -> {path}")
-          return shortest_path
+          return shortest_path, grid
+        # First move is "wait"
+        if nr == start_row and nc == start_col:
+          new_paths.append(path + [(nr, nc)])
         if nr < 0 or nc < 0 or nr >= len(grid) or nc >= len(grid[0]):
           continue
         if len(grid[nr][nc]) == 0:
@@ -145,31 +147,30 @@ def seek(grid, start_pos, goal_pos):
             logging.debug(f"Keeping a path of length {len(path) + 1} ending at ({nr},{nc}). Keeping path")
             ends.add((nr,nc))
             new_paths.append(path + [(nr, nc)])
-      if shortest_path is not None:
-        break
-    if shortest_path is not None:
-      break
 
     if len(new_paths) == 0:
       logging.info("Ran out of paths :(")
-      return None
+      return None, grid
 
     all_paths = new_paths
     logging.info(f"Closest of {len(all_paths)}: {sort_path(all_paths[0])}, furthest: {sort_path(all_paths[-1])}")
-  return shortest_path
 
-shortest_path = seek(grid, initial_position, goal_position)
+
+initial_position = (0,-1)
+goal_position = (len(grid), len(grid[0]) - 1)
+
+shortest_path, next_grid = seek(grid, initial_position, goal_position)
 logging.info(f"Found a short path of {shortest_path}")
 # p.answer_a = 10
 
-# logging.info("turning around...")
-# path_back = seek(grid, goal_position, initial_position)
-# logging.info(f"Found shortest path back: {path_back}")
+logging.info("turning around...")
+path_back, next_grid = seek(next_grid, goal_position, initial_position)
+logging.info(f"Found shortest path back: {path_back}")
 
-# logging.info("turning around...")
-# path_forth = seek(grid, initial_position, goal_position)
-# logging.info(f"Found shortest path forth: {path_forth}")
+logging.info("turning around...")
+path_forth, next_grid = seek(next_grid, initial_position, goal_position)
+logging.info(f"Found shortest path forth: {path_forth}")
 
-# total_time = shortest_path + path_back + path_forth
-# logging.info(f"Total time: {total_time}")
+total_time = shortest_path + path_back + path_forth
+logging.info(f"Total time: {total_time}")
 
