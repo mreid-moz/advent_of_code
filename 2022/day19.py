@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 
 puzz = Puzzle(year=2022, day=19)
 
-TEST = True
+TEST = False
 if TEST:
   lines = [
     "Blueprint 1: Each ore robot costs 4 ore. Each clay robot costs 2 ore. Each obsidian robot costs 3 ore and 14 clay. Each geode robot costs 2 ore and 7 obsidian.",
@@ -95,6 +95,11 @@ for line in lines:
 
 def max_geodes(blueprint, max_ticks=24):
   outcomes = [State(blueprint)]
+  most_needed = {}
+  most_needed['ore'] = max([blueprint.costs[t][0] for t in State.RESOURCE_TYPES])
+  most_needed['clay'] = max([blueprint.costs[t][1] for t in State.RESOURCE_TYPES])
+  most_needed['obsidian'] = max([blueprint.costs[t][2] for t in State.RESOURCE_TYPES])
+  most_needed['geode'] = 10000000000
   for i in range(max_ticks):
     logging.info(f"Time {i+1}, considering {len(outcomes)} states.")
     #max_resources_so_far = outcomes[0].get_both()
@@ -108,27 +113,31 @@ def max_geodes(blueprint, max_ticks=24):
       #  max_state = outcome
       # If we can afford a geode robot, always buy it ASAP.
       affordables = outcome.get_affordables()
-      if 'geode' in affordables:
-        outcome.buy('geode')
-        new_outcomes.append(outcome)
+      # if 'geode' in affordables:
+      #   outcome.buy('geode')
+      #   new_outcomes.append(outcome)
       # Always buy at least one clay robot ASAP too. Unless:
       # If neither obsidian nor geode robots require clay, then this isn't important.
       # I checked the input and they all require clay.
       #elif 'clay' in affordables and outcome.robots['clay'] == 0 and something_needs_clay:
       #  outcome.buy('clay')
       #  new_outcomes.append(outcome)
-      else:
-        # Otherwise, append all paths.
-        # First, don't buy anything (unless *everything* is affordable, in which case don't wait)
-        if len(affordables) < 4:
-          logging.debug("Queueing next step: don't buy")
-          new_outcomes.append(outcome)
-        # Then buy each of the possible things
-        for purchase in outcome.get_affordables():
-          another = outcome.clone()
-          logging.debug(f"Queueing next step: buy {purchase}")
-          another.buy(purchase)
-          new_outcomes.append(another)
+      # else:
+      # Otherwise, append all paths.
+      # First, don't buy anything (unless *everything* is affordable, in which case don't wait)
+      if len(affordables) < 4:
+        logging.debug("Queueing next step: don't buy")
+        new_outcomes.append(outcome)
+      # Then buy each of the possible things
+      for purchase in outcome.get_affordables():
+        if outcome.robots[purchase] >= most_needed[purchase]:
+          # don't buy more of this thing, we already get enough per turn.
+          logging.debug(f"Already have {outcome.robots[purchase]} {purchase} bots. Most we need is {most_needed[purchase]}. Not buying more.")
+          continue
+        another = outcome.clone()
+        logging.debug(f"Queueing next step: buy {purchase}")
+        another.buy(purchase)
+        new_outcomes.append(another)
     outcomes = []
     distinct_states = set()
     # Only keep one state for each distinct outcome. Blueprint is the same for all states.
@@ -139,7 +148,7 @@ def max_geodes(blueprint, max_ticks=24):
         outcomes.append(o)
         distinct_states.add(os)
     # logging.info(f"In {len(new_outcomes)} there were {len(distinct_states)} distinct states")
-    logging.info(f"So far, max resources was with {max_state}")
+    # logging.info(f"So far, max resources was with {max_state}")
 
   logging.info(f"Checking {len(outcomes)} possible outcomes")
   max_geodes = 0
@@ -162,4 +171,3 @@ for blueprint in blueprints:
 logging.info(f"Quality level sum: {quality_levels}")
 if not TEST:
   puzz.answer_a = quality_levels
-# puzz.answer_a = 10
