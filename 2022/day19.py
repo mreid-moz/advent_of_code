@@ -146,8 +146,15 @@ def max_geodes(blueprint, max_ticks=24):
         add_if_new(outcome, new_outcomes, seen_states)
 
       # don't buy stuff on the last round.
-      # if i + 1 == max_ticks:
-      #   continue
+      if i + 1 == max_ticks:
+        continue
+
+      # Always buy a geode bot if we can:
+      if 0 in affordables:
+        another = outcome.clone()
+        another.buy(blueprint, 0)
+        add_if_new(another, new_outcomes, seen_states)
+        continue
 
       # Then buy each of the possible things
       for purchase in affordables:
@@ -168,31 +175,8 @@ def max_geodes(blueprint, max_ticks=24):
         add_if_new(another, new_outcomes, seen_states)
 
     outcomes = new_outcomes
-    # outcomes = []
-    # distinct_states = set()
-    # # Only keep one state for each distinct outcome. Blueprint is the same for all states.
-    # for oi, o in enumerate(new_outcomes):
-    #   # o.tick()
-    #   # os = str(o)
-    #   os = o.get_both()
-    #   if os not in distinct_states:
-    #     outcomes.append(o)
-    #     distinct_states.add(os)
 
-  # logging.info(f"Checking {len(outcomes)} possible outcomes")
-  # max_geodes = 0
-  # max_state = None
-  # for oi, o in enumerate(outcomes):
-  #   if oi > 0 and oi % 200000 == 0:
-  #     logging.info(f"Processing outcome {oi} of {len(outcomes)}")
-  #   geodes = o.geode
-  #   if geodes > max_geodes:
-  #     max_geodes = geodes
-  #     max_state = o
-  #     # logging.debug(f"Found a new max: {o}")
-  # logging.info(f"Max state: {max_state}")
   return max_geodes
-  #return max_state.resources['geode']
 
 if PART_ONE:
   quality_levels = 0
