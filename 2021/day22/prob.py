@@ -62,20 +62,10 @@ class Cuboid:
           state[(x, y, z)] = self.state
 
   def nonempty(self):
-    return self.x_max > self.x_min and self.y_max > self.y_min and self.z_max > self.z_min
+    return self.x_max >= self.x_min and self.y_max >= self.y_min and self.z_max >= self.z_min
 
   def volume(self):
     return (self.x_max - self.x_min + 1) * (self.y_max - self.y_min + 1) * (self.z_max - self.z_min + 1)
-
-  def overlaps_one(self, min1, max1, min2, max2):
-    if min2 < min1:
-      # make sure the first one is always "left-most" in x terms.
-      return self.overlaps_one(min2, max2, min1, max1)
-    if max1 <= min2:
-      #logging.debug(f"{min1}..{max1} does not overlap {min2}..{max2}")
-      return False
-    #logging.debug(f"{min1}..{max1} overlaps {min2}..{max2}")
-    return True
 
   def in_initialization_region(self):
     init_region = Cuboid(1, -50, 50, -50, 50, -50, 50)
@@ -84,12 +74,6 @@ class Cuboid:
   def overlaps(self, other):
     i = self.intersect(other)
     return i.nonempty()
-
-    # x_overlaps = self.overlaps_one(self.x_min, self.x_max, other.x_min, other.x_max)
-    # y_overlaps = self.overlaps_one(self.y_min, self.y_max, other.y_min, other.y_max)
-    # z_overlaps = self.overlaps_one(self.z_min, self.z_max, other.z_min, other.z_max)
-
-    # return x_overlaps and y_overlaps and z_overlaps
 
   def intersect(self, other, state=1):
     i_x_min = max(other.x_min, self.x_min)
@@ -115,6 +99,7 @@ class Cuboid:
                ((0,1),(2,3),(2,3)), ((1,2),(2,3),(2,3)), ((2,3),(2,3),(2,3)) ]
 
   def subtract(self, other):
+    logging.debug(f"Subtracing {other} from {self}")
     # if other.state == self.state:
     #   return [self]
 
@@ -126,25 +111,52 @@ class Cuboid:
     y_sorted = sorted([other.y_min, other.y_max, self.y_min, self.y_max])
     z_sorted = sorted([other.z_min, other.z_max, self.z_min, self.z_max])
 
-    x_ranges = [(x_sorted[0], x_sorted[1] - 1), (x_sorted[1], x_sorted[2] - 1), (x_sorted[2], x_sorted[3])]
-    y_ranges = [(y_sorted[0], y_sorted[1] - 1), (y_sorted[1], y_sorted[2] - 1), (y_sorted[2], y_sorted[3])]
-    z_ranges = [(z_sorted[0], z_sorted[1] - 1), (z_sorted[1], z_sorted[2] - 1), (z_sorted[2], z_sorted[3])]
+    logging.debug(f"x values: {x_sorted}")
+    logging.debug(f"y values: {y_sorted}")
+    logging.debug(f"z values: {z_sorted}")
 
     remainder = []
+    for ((xi0,xi1),(yi0,yi1),(zi0,zi1)) in Cuboid.SUB_GRID:
+      x_min = x_sorted[xi0]
+      x_max = x_sorted[xi1]
+      y_min = y_sorted[yi0]
+      y_max = y_sorted[yi1]
+      z_min = z_sorted[zi0]
+      z_max = z_sorted[zi1]
 
-    for (x_min, x_max) in x_ranges:
-      for (y_min, y_max) in y_ranges:
-        for (z_min, z_max) in z_ranges:
-    # for ((xi0,xi1),(yi0,yi1),(zi0,zi1)) in Cuboid.SUB_GRID:
-    #   x_min = x_sorted[xi0]
-    #   x_max = x_sorted[xi1]
-    #   y_min = y_sorted[yi0]
-    #   y_max = y_sorted[yi1]
-    #   z_min = z_sorted[zi0]
-    #   z_max = z_sorted[zi1]
-          c = Cuboid(self.state, x_min, x_max, y_min, y_max, z_min, z_max)
-          if c.nonempty() and self.overlaps(c) and not other.overlaps(c):
+      if x_max == other.x_min:
+        x_max -= 1
+      if y_max == other.y_min:
+        y_max -= 1
+      if z_max == other.z_min:
+        z_max -= 1
+
+      if x_min == other.x_max:
+        x_min += 1
+      if y_min == other.y_max:
+        y_min += 1
+      if z_min == other.z_max:
+        z_min += 1
+
+      c = Cuboid(self.state, x_min, x_max, y_min, y_max, z_min, z_max)
+      if c.nonempty():
+        logging.debug(f"Y Nonempty: {c}")
+        if self.overlaps(c):
+          logging.debug(f"Y  Overlap: {c}")
+          if not other.overlaps(c):
+            logging.debug(f"Y Other Noverlap: {c}")
             remainder.append(c)
+          else:
+            logging.debug(f"N Other  Overlap: {c}")
+        else:
+          logging.debug(f"N Noverlap: {c}")
+      else:
+        logging.debug(f"N   Empty: {c}")
+      # if c.nonempty() and self.overlaps(c) and not other.overlaps(c):
+      #   logging.debug(f" Overlap: {c}")
+      #   remainder.append(c)
+      # else:
+      #   logging.debug(f"Noverlap: {c}")
     return remainder
 
 def total_ons(cuboids):
