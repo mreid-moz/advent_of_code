@@ -3,7 +3,7 @@ import re
 import sys
 from collections import defaultdict
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 input_file = 'input'
 if len(sys.argv) >= 2:
@@ -14,11 +14,12 @@ with open(input_file) as fin:
 consider_min = -50
 consider_max = 50
 
-def in_range_one(x):
-  return x >= consider_min and x <= consider_max
-
-def in_range(x, y, z):
-  return in_range_one(x) and in_range_one(y) and in_range_one(z)
+def add_if_nonempty(list_of_cuboids, cuboid):
+  if cuboid.nonempty():
+    logging.debug(f"Adding {cuboid}")
+    list_of_cuboids.append(cuboid)
+  else:
+    logging.debug(f"Skipping empty {cuboid}")
 
 class Cuboid:
   MATCH_EXPR = re.compile(r"(on|off) x=([0-9-]+)\.\.([0-9-]+),y=([0-9-]+)\.\.([0-9-]+),z=([0-9-]+)\.\.([0-9-]+)")
@@ -86,77 +87,37 @@ class Cuboid:
     i_z_max = min(other.z_max, self.z_max)
     return Cuboid(state, i_x_min, i_x_max, i_y_min, i_y_max, i_z_min, i_z_max)
 
-  SUB_GRID = [ ((0,1),(0,1),(0,1)), ((1,2),(0,1),(0,1)), ((2,3),(0,1),(0,1)),
-               ((0,1),(1,2),(0,1)), ((1,2),(1,2),(0,1)), ((2,3),(1,2),(0,1)),
-               ((0,1),(2,3),(0,1)), ((1,2),(2,3),(0,1)), ((2,3),(2,3),(0,1)),
-
-               ((0,1),(0,1),(1,2)), ((1,2),(0,1),(1,2)), ((2,3),(0,1),(1,2)),
-               ((0,1),(1,2),(1,2)), ((1,2),(1,2),(1,2)), ((2,3),(1,2),(1,2)),
-               ((0,1),(2,3),(1,2)), ((1,2),(2,3),(1,2)), ((2,3),(2,3),(1,2)),
-
-               ((0,1),(0,1),(2,3)), ((1,2),(0,1),(2,3)), ((2,3),(0,1),(2,3)),
-               ((0,1),(1,2),(2,3)), ((1,2),(1,2),(2,3)), ((2,3),(1,2),(2,3)),
-               ((0,1),(2,3),(2,3)), ((1,2),(2,3),(2,3)), ((2,3),(2,3),(2,3)) ]
-
   def subtract(self, other):
-    logging.debug(f"Subtracing {other} from {self}")
-    # if other.state == self.state:
-    #   return [self]
+    logging.debug(f"Subtracting {other} from {self}")
 
     if not self.overlaps(other):
       return [self]
 
-    # the bounding box is:
-    x_sorted = sorted([other.x_min, other.x_max, self.x_min, self.x_max])
-    y_sorted = sorted([other.y_min, other.y_max, self.y_min, self.y_max])
-    z_sorted = sorted([other.z_min, other.z_max, self.z_min, self.z_max])
-
-    logging.debug(f"x values: {x_sorted}")
-    logging.debug(f"y values: {y_sorted}")
-    logging.debug(f"z values: {z_sorted}")
-
+    intersection = self.intersect(other)
     remainder = []
-    for ((xi0,xi1),(yi0,yi1),(zi0,zi1)) in Cuboid.SUB_GRID:
-      x_min = x_sorted[xi0]
-      x_max = x_sorted[xi1]
-      y_min = y_sorted[yi0]
-      y_max = y_sorted[yi1]
-      z_min = z_sorted[zi0]
-      z_max = z_sorted[zi1]
 
-      if x_max == other.x_min:
-        x_max -= 1
-      if y_max == other.y_min:
-        y_max -= 1
-      if z_max == other.z_min:
-        z_max -= 1
+    h = {}
+    h['-x'] = {'min': self.x_min, 'max': intersection.x_min - 1}
+    h['-y'] = {'min': self.y_min, 'max': intersection.y_min - 1}
+    h['-z'] = {'min': self.z_min, 'max': intersection.z_min - 1}
 
-      if x_min == other.x_max:
-        x_min += 1
-      if y_min == other.y_max:
-        y_min += 1
-      if z_min == other.z_max:
-        z_min += 1
+    h['x'] =  {'min': intersection.x_min, 'max': intersection.x_max}
+    h['y'] =  {'min': intersection.y_min, 'max': intersection.y_max}
+    h['z'] =  {'min': intersection.z_min, 'max': intersection.z_max}
 
-      c = Cuboid(self.state, x_min, x_max, y_min, y_max, z_min, z_max)
-      if c.nonempty():
-        logging.debug(f"Y Nonempty: {c}")
-        if self.overlaps(c):
-          logging.debug(f"Y  Overlap: {c}")
-          if not other.overlaps(c):
-            logging.debug(f"Y Other Noverlap: {c}")
-            remainder.append(c)
-          else:
-            logging.debug(f"N Other  Overlap: {c}")
-        else:
-          logging.debug(f"N Noverlap: {c}")
-      else:
-        logging.debug(f"N   Empty: {c}")
-      # if c.nonempty() and self.overlaps(c) and not other.overlaps(c):
-      #   logging.debug(f" Overlap: {c}")
-      #   remainder.append(c)
-      # else:
-      #   logging.debug(f"Noverlap: {c}")
+    h['+x'] =  {'min': intersection.x_max + 1, 'max': self.x_max}
+    h['+y'] =  {'min': intersection.y_max + 1, 'max': self.y_max}
+    h['+z'] =  {'min': intersection.z_max + 1, 'max': self.z_max}
+
+    # Figure out the 26 possible "other" pieces:
+    for xk in ['-x','x','+x']:
+      for yk in ['-y','y','+y']:
+        for zk in ['-z', 'z', '+z']:
+          if xk == 'x' and yk == 'y' and zk == 'z':
+            continue
+          logging.debug(f"Processing sub-cube {xk},{yk},{zk}")
+          add_if_nonempty(remainder, Cuboid(self.state, h[xk]['min'], h[xk]['max'], h[yk]['min'], h[yk]['max'], h[zk]['min'], h[zk]['max']))
+
     return remainder
 
 def total_ons(cuboids):
@@ -174,6 +135,7 @@ if __name__ == "__main__":
       continue
     cuboids.append(Cuboid(line))
 
+  # This was part 1, but part 2 supercedes it:
   #cubes = defaultdict(int)
   #for cuboid in cuboids:
   #  cuboid.set(cubes)
@@ -181,9 +143,6 @@ if __name__ == "__main__":
   #logging.info(f"cubes on: {sum(cubes.values())}")
 
   # part 2: do it by volume and intersection
-  ## Next attempt:
-  # if it's an on, find overlapping ons and find the diff, adding only the non-overlapping new on
-  # if it's an off, find overlapping ons and subtract it from each one, re-adding leftover on bits
   applied_cuboids = [cuboids[0]]
   logging.info(f"Starting with {cuboids[0]}")
   for cuboid in cuboids[1:]:
@@ -192,13 +151,12 @@ if __name__ == "__main__":
     new_applied_cuboids = []
     for ac in applied_cuboids:
       if ac.overlaps(cuboid):
-        logging.info(f"It overlaps with {ac}")
+        logging.debug(f"It overlaps with {ac}")
         i = ac.intersect(cuboid)
         logging.debug(f"Intersection: {i}. breaking down:")
         for sub in ac.subtract(cuboid):
           logging.debug(f"Remainder: {sub}")
           new_applied_cuboids.append(sub)
-        # overlapping_cuboids.append(ac)
       else:
         # logging.debug(f"Doesn't overlap with {ac}")
         new_applied_cuboids.append(ac)
@@ -208,12 +166,6 @@ if __name__ == "__main__":
     applied_cuboids = new_applied_cuboids
     logging.info(f"Volume after: {total_ons(applied_cuboids)} (using {len(applied_cuboids)} cuboids)")
 
-  # total_ons = 0
-  # for c in applied_cuboids:
-  #   if c.state == 1:
-  #     total_ons += c.volume()
-
   logging.info(f"Total ons = {total_ons(applied_cuboids)}")
-
   logging.info(f"Total ons in init region = {total_ons([c for c in applied_cuboids if c.in_initialization_region()])}")
 
