@@ -8,7 +8,7 @@ echo "import sys" >> day$1.py
 echo "" >> day$1.py
 echo "logging.basicConfig(level=logging.DEBUG)" >> day$1.py
 echo "" >> day$1.py
-echo "p = Puzzle(year=2022, day=$1)" >> day$1.py
+echo "p = Puzzle(year=2023, day=$1)" >> day$1.py
 echo "" >> day$1.py
 echo "lines = p.input_data.splitlines()" >> day$1.py
 echo "" >> day$1.py
