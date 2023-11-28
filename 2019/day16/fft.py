@@ -22,29 +22,40 @@ def get_base(i, repeat):
   #i2 = math.floor(i / repeat)
   #return BASE[(i2 + 1) % len(BASE)]
 
-def fft(n):
-  logging.debug("Computing fft for {}".format(n))
+def fft(n, skip_start=False):
   digits = n
   if isinstance(n, int):
     digits = get_digits(n)
-  out = []
-  for i in range(len(digits)):
-    repeat = i + 1
-    total = 0
-    for idx, d in enumerate(digits):
-      b = get_base(idx, repeat)
-      total += d * b
-      logging.debug("{} * {} = {}".format(d, b, d*b))
-    out_digit = abs(total) % 10
-    logging.debug("Total: {} ({})".format(total, out_digit))
-    out.append(out_digit)
+  out = [0] * len(digits)
+  out[-1] = digits[-1]
+  if not skip_start:
+    for i in range(len(digits) // 2):
+      repeat = i + 1
+      total = 0
+      for idx, d in enumerate(digits):
+        b = get_base(idx, repeat)
+        total += d * b
+        #logging.debug("{} * {} = {}".format(d, b, d*b))
+      out_digit = abs(total) % 10
+      #logging.debug("Total: {} ({})".format(total, out_digit))
+      out[i] = out_digit
+  else:
+    logging.debug("Skipping start.")
+
+  for i in range(len(digits) - 2, len(digits) // 2 - 1, -1):
+    next_digit = (digits[i] + out[i+1]) % 10
+    out[i] = next_digit
   return out
 
-def phase(n, phase):
+def phase(n, phase, skip_start=False):
   for p in range(phase):
-    n = fft(n)
-    logging.info("After phase {}: {}".format(p+1, n))
+    n = fft(n, skip_start)
+    logging.info("running phase {}".format(p+1))
+    logging.debug(n)
   return n
+
+def shrank(n):
+  return "".join([str(s) for s in n])
 
 def test():
   assert(get_base(0, 1) == 1)
@@ -82,13 +93,37 @@ def test():
   f = phase(80871224585914546619083218645595, 100)
   assert(f[0:8] == [2,4,1,7,6,1,7,6])
 
+  one_piece = "80871224585914546619083218645595"
+  one_piece_digits = [int(s) for s in one_piece]
+  f = phase(one_piece_digits * 100, 100, skip_start=True)
+  print(shrank(f))
+  print("{}".format(shrank(f[0:32])))
+  print("{}".format(shrank(f[32:64])))
+  print("{}".format(shrank(f[64:96])))
+  print("{}".format(shrank(f[96:128])))
+  # print("{}".format(shrank(f[128:160])))
+  # print("{}".format(shrank(f[160:192])))
 
-#test()
+TEST=False
 
-with open("input") as fin:
-  source_digits = fin.read().strip()
+if TEST:
+  test()
+else:
+  with open("input") as fin:
+    source_digits = fin.read().strip()
 
-source_digits = [int(s) for s in source_digits]
+  # source_digits = [int(s) for s in source_digits]
+  source_digits = [int(s) for s in "03036732577212944063491565474664"]
 
-f = phase(source_digits, 100)
-print("First 8: {}".format("".join(f[0:8])))
+  # Part 1:
+  # f = phase(source_digits, 100)
+  # print("First 8: {}".format("".join(f[0:8])))
+
+  # Part 2:
+  message_offset = int(shrank(source_digits[0:7]))
+  logging.info("message offset: {}".format(message_offset))
+  f = phase(source_digits * 10000, 100, skip_start=True)
+  print("Message: {}".format(shrank(f[message_offset:message_offset+8])))
+
+
+
