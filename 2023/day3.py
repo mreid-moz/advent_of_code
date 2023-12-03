@@ -35,19 +35,24 @@ for row in range(len(lines)):
 				continue
 			current_num = int(current_num)
 			nums.append(current_num)
-			for position in positions: 
+			for position in positions:
 				num_positions[position] = (current_num, positions[0])
 			current_num = ''
 			positions = []
+	# emit the current number if we're at the end of the line.
+	if current_num != '':
+		current_num = int(current_num)
+		nums.append(current_num)
+		for position in positions:
+			num_positions[position] = (current_num, positions[0])
+		current_num = ''
+		positions = []
 			
 num_vals = len(set(num_positions.values()))
 logging.info("Found {} numbers, {} distinct numbers ({} vals), {} symbols. Largest was {}".format(len(nums), len(set(nums)), num_vals, len(symbol_positions), max(nums)))
 
-# .111....
-# .x......
-# ........
-
 part_numbers = set()
+gear_ratio_sum = 0
 for position, symbol in symbol_positions.items():
 	x, y = position
 	adjacent_nums = set()
@@ -64,37 +69,45 @@ for position, symbol in symbol_positions.items():
 				adjacent_nums.add(num_positions[(nx, ny)])
 				logging.debug("Found a number adjacent to ({},{})={}: ({},{})={}".format(
 					x, y, symbol, nx, ny, num_positions[(nx, ny)]))
-	logging.info("Symbol {} at {} was adjacent to {} digits comprising {} unique numbers: {}".format(
+	logging.debug("Symbol {} at {} was adjacent to {} digits comprising {} unique numbers: {}".format(
 		symbol, position, adj_count, len(adjacent_nums), sorted(adjacent_nums)))
+	if symbol == '*' and len(adjacent_nums) == 2:
+		logging.info("Found a gear at {}".format(position))
+		gear_ratio = 1
+		for n, _ in adjacent_nums:
+			gear_ratio *= n
+		gear_ratio_sum += gear_ratio
 
 part_sum = sum([i[0] for i in part_numbers])
 
 logging.info("Sum of engine part numbers: {}".format(part_sum))
 
-part_numbers = set()
-for position, num in num_positions.items():
-	x, y = position
-	had_neighbours = False
-	for xd in [-1, 0, 1]:
-		for yd in [-1, 0, 1]:
-			if xd == 0 and yd == 0:
-				# logging.warn("boo")
-				continue
-			nx = x + xd
-			ny = y + yd
-			if (nx, ny) in symbol_positions:
-				part_numbers.add(num)
-				had_neighbours = True
-				logging.debug("Found a symbol adjacent to ({},{})={}: ({},{})={}".format(
-					x, y, num, nx, ny, symbol_positions[(nx, ny)]))
+# Try it starting with numbers instead of symbols:
+# part_numbers = set()
+# for position, num in num_positions.items():
+# 	x, y = position
+# 	had_neighbours = False
+# 	for xd in [-1, 0, 1]:
+# 		for yd in [-1, 0, 1]:
+# 			if xd == 0 and yd == 0:
+# 				# logging.warn("boo")
+# 				continue
+# 			nx = x + xd
+# 			ny = y + yd
+# 			if (nx, ny) in symbol_positions:
+# 				part_numbers.add(num)
+# 				had_neighbours = True
+# 				logging.debug("Found a symbol adjacent to ({},{})={}: ({},{})={}".format(
+# 					x, y, num, nx, ny, symbol_positions[(nx, ny)]))
 
-for n, pos in sorted(set(num_positions.values()), key=lambda x: (x[1][1], x[1][0])):
-	if (n, pos) not in part_numbers:
-		logging.info("{} at {} didn't have a symbol nearby :(".format(n, pos))
+# for n, pos in sorted(set(num_positions.values()), key=lambda x: (x[1][1], x[1][0])):
+# 	if (n, pos) not in part_numbers:
+# 		logging.debug("{} at {} didn't have a symbol nearby :(".format(n, pos))
 
-part_sum = sum([i[0] for i in part_numbers])
+# part_sum = sum([i[0] for i in part_numbers])
 
-logging.info("Sum of engine part numbers: {}".format(part_sum))
+# logging.info("Sum of engine part numbers: {}".format(part_sum))
 
 if not TEST:
 	p.answer_a = part_sum
+	p.answer_b = gear_ratio_sum
