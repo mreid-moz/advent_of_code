@@ -16,6 +16,7 @@ else:
 
 card_values = 0
 
+# Each item is (card id, number of instances we have)
 cards = [('Card 0', 0)] * len(lines)
 
 for i, line in enumerate(lines):
@@ -24,7 +25,7 @@ for i, line in enumerate(lines):
     winners, haves = nums.split(' | ')
     winners = winners.strip()
     haves = haves.strip()
-    win_set = set(winners.split())
+    win_set = set(winners.split()) # arg-free split splits on \s+, sometimes there's more than one space.
     have_set = set(haves.split())
     num_winners = len(have_set.intersection(win_set))
     for w in range(num_winners):
