@@ -41,3 +41,24 @@ logging.info("Final product: {}".format(product))
 if not TEST:
     p.answer_a = product
 
+# Part 2
+time = int("".join(lines[0].split()[1:]))
+distance = int("".join(lines[1].split()[1:]))
+
+logging.debug("looking for ways to beat t={}, d={}".format(time, distance))
+# could do a binary search to find the first value that doesn't win...
+win_count = 1 # the one at exactly half wins for sure
+for i in range((time // 2) - 1, 0, -1):
+    speed = i
+    my_distance = speed * (time - i)
+    if i % 1000 == 0:
+        logging.debug("t={}, d={}. Charging for {} -> {}".format(time, distance, i, my_distance))
+    if my_distance > distance:
+        win_count += 2
+    else:
+        # there won't be any more winners once we start losing
+        break
+
+logging.info("Number of ways to beat t={}, d={}: {}".format(time, distance, win_count))
+if not TEST:
+    p.answer_b = win_count
