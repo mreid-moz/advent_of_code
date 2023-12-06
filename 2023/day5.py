@@ -4,7 +4,7 @@ import logging
 import re
 import sys
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 p = Puzzle(year=2023, day=5)
 
@@ -33,9 +33,6 @@ for line in lines[2:]:
 
         dest_range, src_range, length = [int(r) for r in line.split()]
         maps[current_map_key][src_range] = (dest_range, length)
-        # for i in range(length):
-        #     current_map[src_range + i] = dest_range + i
-# maps[current_map_key] = current_map
 
 for k, v in maps.items():
     logging.debug("Found a key of {}, its sub-map had {} items".format(k, len(v)))
@@ -47,104 +44,107 @@ def apply_map(seed, the_map):
             return dest + offset
     return seed
 
-def reverse_map(location_start, location_end, humidity_to_location_map):
-    a = location_start
-    b = location_end
+def apply_map_range(seed_start, seed_end, the_map):
+    remaining_to_check = [(seed_start, seed_end)]
+    outputs = []
+    while len(remaining_to_check) > 0:
+        a, b = remaining_to_check.pop()
+        logging.debug("Checking range {}..{}".format(a, b))
+        found_an_overlap = False
+        for src, (dest, length) in the_map.items():
+            logging.debug("checking map entry src={}, dest={}, length={}".format(src, dest, length))
+            src_start = src
+            src_end = src + length - 1
 
-    # a ....... b
-    #    c ........... d
-    #    ^      ^
+            overlap_start = max(src_start, a)
+            overlap_end = min(src_end, b)
 
-    #         a ....... b
-    #    c ................. d
-    #         ^         ^
+            if overlap_end >= overlap_start:
+                logging.debug("Found an overlap {}..{} remaps from {}..{} to {}..{}".format(overlap_start, overlap_end, src_start, src_end, dest, dest + length - 1))
+                found_an_overlap = True
+                if overlap_start > a:
+                    logging.debug("Adding a remainder {}..{}".format(a, overlap_start - 1))
+                    remaining_to_check.append((a, overlap_start - 1))
+                if overlap_end < b:
+                    logging.debug("Adding a remainder {}..{}".format(overlap_end + 1, b))
+                    remaining_to_check.append((overlap_end + 1, b))
 
-    #                a ....... b
-    #    c .............. d
-    #                ^    ^
+                offset_start = overlap_start - src_start
+                offset_length = overlap_end - overlap_start
+                outputs.append((dest + offset_start, dest + offset_start + offset_length))
+        if not found_an_overlap:
+            outputs.append((a, b))
+    logging.debug("{}..{} -> {}".format(seed_start, seed_end, outputs))
+    return outputs
 
-    #   a ....... b
-    #                c .............. d
-    #         X         
+def seed_to_location(seed):
+    soil = apply_map(seed, maps["seed-to-soil map:"])
+    fertilizer = apply_map(soil, maps["soil-to-fertilizer map:"])
+    water = apply_map(fertilizer, maps["fertilizer-to-water map:"])
+    light = apply_map(water, maps["water-to-light map:"])
+    temp = apply_map(light, maps["light-to-temperature map:"])
+    humidity = apply_map(temp, maps["temperature-to-humidity map:"])
+    location = apply_map(humidity, maps["humidity-to-location map:"])
+    return location
 
-    min_start = None
-    min_end = None
-    for src, (dest, length) in humidity_to_location_map.items():
-        dest_start = dest
-        dest_end = dest + length - 1
+def seed_to_location2(seed_start, seed_end):
+    # output_ranges = []
+    output_ranges = apply_map_range(seed_start, seed_end, maps["seed-to-soil map:"])
+    next_ranges = []
+    for rs, re in output_ranges:
+        next_ranges += apply_map_range(rs, re, maps["soil-to-fertilizer map:"])
+    output_ranges = next_ranges
 
-        overlap_start = max(a, dest_start)
-        overlap_end = min(b, dest_end)
+    next_ranges = []
+    for rs, re in output_ranges:
+        next_ranges += apply_map_range(rs, re, maps["fertilizer-to-water map:"])
+    output_ranges = next_ranges
 
-        if overlap_end >= overlap_start:
-            offset_start = overlap_start - dest
-            offset_end = overlap_end - dest
-            logging.debug("Found an overlap between {}..{} and {}..{}: {}..{}. Maps to start {}..{}".format(
-                a, b, dest_start, dest_end, overlap_start, overlap_end, src + offset_start, src + offset_end))
+    next_ranges = []
+    for rs, re in output_ranges:
+        next_ranges += apply_map_range(rs, re, maps["water-to-light map:"])
+    output_ranges = next_ranges
 
-            ### don't stop short, look for the lowest overlapping range ###
-            if min_start is None or min_start > src + offset_start:
-                min_start = src + offset_start
-                min_end = src + offset_end
-            return (src + offset_start, src + offset_end)
-    if min_start is not None:
-        return (min_start, min_end)
-    return (location_start, location_end)
+    next_ranges = []
+    for rs, re in output_ranges:
+        next_ranges += apply_map_range(rs, re, maps["light-to-temperature map:"])
+    output_ranges = next_ranges
 
+    next_ranges = []
+    for rs, re in output_ranges:
+        next_ranges += apply_map_range(rs, re, maps["temperature-to-humidity map:"])
+    output_ranges = next_ranges
 
-soils = [apply_map(a, maps["seed-to-soil map:"]) for a in seeds]
-fertilizers = [apply_map(a, maps["soil-to-fertilizer map:"]) for a in soils]
-waters = [apply_map(a, maps["fertilizer-to-water map:"]) for a in fertilizers]
-lights = [apply_map(a, maps["water-to-light map:"]) for a in waters]
-temps = [apply_map(a, maps["light-to-temperature map:"]) for a in lights]
-humidities = [apply_map(a, maps["temperature-to-humidity map:"]) for a in temps]
-locations = [apply_map(a, maps["humidity-to-location map:"]) for a in humidities]
+    next_ranges = []
+    for rs, re in output_ranges:
+        next_ranges += apply_map_range(rs, re, maps["humidity-to-location map:"])
+    output_ranges = next_ranges
+
+    return output_ranges
+
+locations = [seed_to_location(a) for a in seeds]
 
 lowest = sorted(locations)[0]
-logging.info("Lowest: {}".format(lowest))
+# logging.info("Lowest: {}".format(lowest))
 if not TEST:
     p.answer_a = lowest
 
-# Part 2: work backwards from the lowest location.
-lowest_location_start = None
-lowest_location_end = None
-for src, (dest, length) in maps["humidity-to-location map:"].items():
-    if lowest_location_start is None or dest < lowest_location_start:
-        lowest_location_start = dest
-        lowest_location_end = dest + length - 1
+# Part 2
+ranges = []
+for i in range(0, len(seeds), 2):
+    range_start = seeds[i]
+    range_end = range_start + seeds[i+1] - 1
+    ranges.append((range_start, range_end))
 
-logging.debug("lowest location range possible is {} to {}".format(lowest_location_start, lowest_location_end))
+lowest_location = None
+for ss, se in ranges:
+    location_ranges = seed_to_location2(ss, se)
+    for ls, le in location_ranges:
+        if lowest_location is None or ls < lowest_location:
+            logging.info("Found a new low location: {}".format(ls))
+            lowest_location = ls
 
-humidity_start, humidity_end = reverse_map(lowest_location_start, lowest_location_end, maps["humidity-to-location map:"])
-logging.debug("lowest humidity range possible is {} to {}".format(humidity_start, humidity_end))
-
-temp_start, temp_end = reverse_map(humidity_start, humidity_end, maps["temperature-to-humidity map:"])
-logging.debug("lowest temp range possible is {} to {}".format(temp_start, temp_end))
-
-light_start, light_end = reverse_map(temp_start, temp_end, maps["light-to-temperature map:"])
-logging.debug("lowest light range possible is {} to {}".format(light_start, light_end))
-
-water_start, water_end = reverse_map(light_start, light_end, maps["water-to-light map:"])
-logging.debug("lowest water range possible is {} to {}".format(water_start, water_end))
-
-fertilizer_start, fertilizer_end = reverse_map(water_start, water_end, maps["fertilizer-to-water map:"])
-logging.debug("lowest fertilizer range possible is {} to {}".format(fertilizer_start, fertilizer_end))
-
-soil_start, soil_end = reverse_map(fertilizer_start, fertilizer_end, maps["soil-to-fertilizer map:"])
-logging.debug("lowest soil range possible is {} to {}".format(soil_start, soil_end))
-
-seed_start, seed_end = reverse_map(soil_start, soil_end, maps["seed-to-soil map:"])
-logging.debug("lowest seed range possible is {} to {}".format(seed_start, seed_end))
-
+logging.info("lowest location: {}".format(lowest_location))
 if not TEST:
-    p.answer_b = seed_start
-
-soils = [apply_map(a, maps["seed-to-soil map:"]) for a in [2499418212, 2837953084]]
-fertilizers = [apply_map(a, maps["soil-to-fertilizer map:"]) for a in soils]
-waters = [apply_map(a, maps["fertilizer-to-water map:"]) for a in fertilizers]
-lights = [apply_map(a, maps["water-to-light map:"]) for a in waters]
-temps = [apply_map(a, maps["light-to-temperature map:"]) for a in lights]
-humidities = [apply_map(a, maps["temperature-to-humidity map:"]) for a in temps]
-locations = [apply_map(a, maps["humidity-to-location map:"]) for a in humidities]
-
-logging.info("those two translate to {}".format(locations))
+    p.answer_b = lowest_start
+    
