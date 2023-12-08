@@ -1,5 +1,6 @@
 from aocd.models import Puzzle
 from collections import defaultdict
+from utils import lcm
 import logging
 import re
 import sys
@@ -19,14 +20,6 @@ num_moves = len(moves)
 
 def get_move(i):
     return moves[i % num_moves]
-
-def gcd(a, b):
-    while b > 0:
-        a, b = b, a % b
-    return a
-
-def lcm(a, b):
-    return a * b // gcd(a, b)
 
 path = {}
 
