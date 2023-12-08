@@ -20,20 +20,36 @@ num_moves = len(moves)
 def get_move(i):
     return moves[i % num_moves]
 
+def gcd(a, b):
+    while b > 0:
+        a, b = b, a % b
+    return a
+
+def lcm(a, b):
+    return a * b // gcd(a, b)
+
 path = {}
+
+def get_steps(node, all_z=False):
+    current = node
+    steps = 0
+    while True:
+        if current == 'ZZZ':
+            break
+        if all_z is False and current[-1] == 'Z':
+            break
+        next_direction = get_move(steps)
+        steps += 1
+        current = path[current][next_direction]
+    return steps
 
 for line in lines[2:]:
     lhs, rhs = line.split(' = ')
     rl, rr = rhs[1:-1].split(', ')
     path[lhs] = {'L': rl, 'R': rr}
 
-current = 'AAA'
-steps = 0
-while current != 'ZZZ':
-    next_direction = get_move(steps)
-    steps += 1
-    current = path[current][next_direction]
-
+steps = get_steps('AAA', all_z=True)
+logging.info("Took {} steps to get from AAA to ZZZ".format(steps))
 if not TEST:
     p.answer_a = steps
 
@@ -41,19 +57,14 @@ if not TEST:
 currents = [k for k in path.keys() if k[-1] == 'A']
 num_nodes = len(currents)
 logging.info("Found {} nodes that end in A: {}".format(num_nodes, currents))
-num_zs = 0
-steps = 0
-while num_zs < num_nodes:
-    next_direction = get_move(steps)
-    steps += 1
-    num_zs = 0
-    for i in range(num_nodes):
-        next_node = path[currents[i]][next_direction]
-        currents[i] = next_node
-        if next_node[-1] == 'Z':
-            num_zs += 1
-    if steps % 100 == 0:
-        logging.debug("Step {}: {} Zs. {}".format(steps, num_zs, currents))
+periods = [get_steps(c) for c in currents]
+logging.info("Periods for each A node: {}".format(periods))
+
+total_period = periods[0]
+for period in periods[1:]:
+    total_period = lcm(total_period, period)
+
+logging.info("Total period: {}".format(total_period))
 
 if not TEST:
-    p.answer_b = steps
+    p.answer_b = total_period
