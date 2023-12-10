@@ -7,6 +7,9 @@ class Maze:
     self.maze = self.parse_maze(maze_string)
     self.key_count = self.count_keys()
 
+  def __str__(self):
+    return self.maze_string
+
   def parse_maze(self, maze_string):
     maze = {}
     lines = maze_string.strip().split("\n")
@@ -90,16 +93,16 @@ def test():
 
   for t in test_cases:
     shortest_path = shortest(t.maze)
-    logging.info("{}-key maze:\n{}".format(t.maze.key_count, t.maze_string))
+    logging.info("{}-key maze:\n{}".format(t.maze.key_count, t.maze))
     logging.info("Shortest path: {} (len {}) vs. expected length {}".format(shortest_path, -1, t.shortest_path_length))
     #assert(len(shortest_path == t.shortest_path_length))
   logging.info("All tests pass.")
   pass
 
-#test()
+test()
 
-with open('input') as fin:
-  maze_string = fin.read().strip()
+# with open('input') as fin:
+#   maze_string = fin.read().strip()
 
-maze = Maze(maze_string)
+# maze = Maze(maze_string)
 #logging.info("{}-key maze:\n{}".format(maze.key_count, maze.maze_string))
