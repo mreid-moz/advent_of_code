@@ -6,7 +6,7 @@ def gcd(a, b):
 def lcm(a, b):
     return a * b // gcd(a, b)
 
-def neighbours(x, y, min_x=None, max_x=None, min_y=None, max_y=None):
+def neighbours(x, y, min_x=None, max_x=None, min_y=None, max_y=None, include_diagonals=True):
     n = []
     for xd in [-1, 0, 1]:
         nx = x + xd
@@ -16,6 +16,8 @@ def neighbours(x, y, min_x=None, max_x=None, min_y=None, max_y=None):
             continue
         for yd in [-1, 0, 1]:
             if xd == 0 and yd == 0:
+                continue
+            if not include_diagonals and (xd != 0 and yd != 0):
                 continue
             ny = y + yd
             if min_y is not None and ny < min_y:
