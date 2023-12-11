@@ -33,20 +33,48 @@ def count_less_than(nums, target):
             c += 1
     return c
 
+def total_distance(galaxy_map):
+    td = 0
+    galaxies = sorted(galaxy_map.keys())
+    for i, (x1, y1) in enumerate(galaxies[:-1]):
+        for j, (x2, y2) in enumerate(galaxies[i+1:]):
+            d = manhattan(x1, y1, x2, y2)
+            # logging.debug("Distance from {},{} to {},{} is {}".format(x1, y1, x2, y2, d))
+            td += d
+    return td
+
+class ExpandableMap:
+    def __init__(self, galaxy_map, empty_rows, empty_cols, expansion_factor=1):
+        self.galaxy_map = galaxy_map
+        self.empty_rows = empty_rows
+        self.empty_cols = empty_cols
+        self.expansion_factor = expansion_factor
+        self.expanded_keys = None
+
+    def expand_key(self, x, y):
+        new_x = x + (count_less_than(self.empty_cols, x) * (self.expansion_factor - 1))
+        new_y = y + (count_less_than(self.empty_rows, y) * (self.expansion_factor - 1))
+        return (new_x, new_y)
+
+    def keys(self):
+        if self.expanded_keys is None:
+            self.expanded_keys = [self.expand_key(x, y) for (x, y) in self.galaxy_map.keys()]
+        return self.expanded_keys
+
 galaxy_map = {}
-y_offset = 0
+empty_rows = []
 for y, line in enumerate(lines):
     if len(set(line)) == 1: # all dots
-        y_offset += 1
+        empty_rows.append(y)
         continue
     for x, c in enumerate(line):
         if c == '#':
-            galaxy_map[(x, y + y_offset)] = c
+            galaxy_map[(x, y)] = c
 
-max_y = len(lines) + y_offset - 1
+max_y = len(lines)
 max_x = len(lines[0]) - 1
 
-logging.debug("Before expanding columns:")
+logging.debug("Before expanding:")
 draw_map(galaxy_map, max_x, max_y)
 
 empty_cols = []
@@ -59,25 +87,18 @@ for x in range(max_x + 1):
     if is_empty:
         empty_cols.append(x)
 
-logging.debug("Found emopty cols {} ".format(empty_cols))
+logging.debug("Found empty rows {} and empty cols {} ".format(empty_rows, empty_cols))
 
-expanded_galaxy_map = {}
-for (x, y), v in galaxy_map.items():
-    x_offset = count_less_than(empty_cols, x)
-    expanded_galaxy_map[(x + x_offset, y)] = v
-max_x += len(empty_cols)
-
-logging.debug("After expanding columns:")
-draw_map(expanded_galaxy_map, max_x, max_y)
-
-total_distance = 0
-galaxies = sorted(expanded_galaxy_map.keys())
-for i, (x1, y1) in enumerate(galaxies[:-1]):
-    for j, (x2, y2) in enumerate(galaxies[i+1:]):
-        d = manhattan(x1, y1, x2, y2)
-        logging.debug("Distance from {},{} to {},{} is {}".format(x1, y1, x2, y2, d))
-        total_distance += d
-
-logging.info("Total distance: {}".format(total_distance))
+# part 1
+expanded_galaxy_map = ExpandableMap(galaxy_map, empty_rows, empty_cols, 2)
+total_galaxy_distance = total_distance(expanded_galaxy_map)
+logging.info("Total distance: {}".format(total_galaxy_distance))
 if not TEST:
-    p.answer_a = total_distance
+    p.answer_a = total_galaxy_distance
+
+# part 2
+expanded_galaxy_map = ExpandableMap(galaxy_map, empty_rows, empty_cols, 1000000)
+total_galaxy_distance = total_distance(expanded_galaxy_map)
+logging.info("Total distance: {}".format(total_galaxy_distance))
+if not TEST:
+    p.answer_b = total_galaxy_distance
