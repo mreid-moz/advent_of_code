@@ -44,3 +44,6 @@ def get_overlap(a_start, a_end, b_start, b_end):
     if overlap_end >= overlap_start:
         return (overlap_start, overlap_end)
     return None
+
+def manhattan(x1, y1, x2, y2):
+    return abs(x2 - x1) + abs(y2 - y1)
