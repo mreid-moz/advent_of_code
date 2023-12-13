@@ -6,6 +6,12 @@ def gcd(a, b):
 def lcm(a, b):
     return a * b // gcd(a, b)
 
+def rows_to_cols(rows):
+    cols = []
+    for i in range(len(rows[0])):
+        cols.append(''.join([r[i] for r in rows]))
+    return cols
+
 def neighbours(x, y, min_x=None, max_x=None, min_y=None, max_y=None, include_diagonals=True):
     n = []
     for xd in [-1, 0, 1]:
