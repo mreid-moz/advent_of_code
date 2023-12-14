@@ -12,6 +12,38 @@ def rows_to_cols(rows):
         cols.append(''.join([r[i] for r in rows]))
     return cols
 
+def draw_map(m, mx, my, print_now=True, default_char='.'):
+    lines = []
+    for y in range(my+1):
+        chars = []
+        for x in range(mx+1):
+            chars.append(m.get((x, y), default_char))
+        lines.append(''.join(chars))
+        if print_now:
+            print(lines[-1])
+    return lines
+
+def coalesce(v, default_char):
+    if v is None:
+        return default_char
+    return v
+
+def draw_grid(g, print_now=True, default_char='.'):
+    lines = []
+    for row in g:
+        line = ''.join(str(coalsece(x, default_char) for x in g[row]))
+        if print_now:
+            print(line)
+        lines.append(line)
+    return lines
+
+def map_to_grid(m, mx, my):
+    grid = []
+    for y in range(my):
+        grid.append([] * x)
+    for kx, ky in m.keys():
+        grid[ky][kx] = m[(kx, ky)]
+
 def neighbours(x, y, min_x=None, max_x=None, min_y=None, max_y=None, include_diagonals=True):
     n = []
     for xd in [-1, 0, 1]:
