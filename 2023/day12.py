@@ -1,80 +1,87 @@
 from aocd.models import Puzzle
 from collections import defaultdict
+from functools import cache
 import logging
 import re
 import sys
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 p = Puzzle(year=2023, day=12)
 
-TEST = True
+TEST = False
 if TEST:
-    # lines = p.examples[0].input_data.splitlines()
-    lines = """???.### 1,1,3
-.??..??...?##. 1,1,3
-?#?#?#?#?#?#?#? 1,3,1,6
-????.#...#... 4,1,1
-????.######..#####. 1,6,5
-?###???????? 3,2,1""".splitlines()
+    lines = p.examples[0].input_data.splitlines()
+    lines = [
+        '???.### 1,1,3',
+        '.??..??...?##. 1,1,3',
+        '?#?#?#?#?#?#?#? 1,3,1,6',
+        '????.#...#... 4,1,1',
+        '????.######..#####. 1,6,5',
+        '?###???????? 3,2,1',
+        # '????#???????#????? 1,8,1,1,1',
+        # '??? 1,1',
+    ]
 else:
     lines = p.input_data.splitlines()
 
-def count_contiguous(springs, lengths, incomplete_ok=False):
-    length_idx = 0
-    current_length = 0
-    contigs = []
-    for i, c in enumerate(springs):
-        if c == '#':
-            current_length += 1
-        elif current_length != 0:
-            # logging.debug("{} {} at {}: Checking current length {} against lengths[{}]".format(springs, lengths, i, current_length, length_idx))
-            if length_idx >= len(lengths):
-                return False
-            if current_length != lengths[length_idx]:
-                return False
-            contigs.append(current_length)
-            length_idx += 1
-            current_length = 0
-    if current_length > 0:
-        contigs.append(current_length)
-
-    lc = len(contigs)
-    ll = len(lengths)
-    if lc > ll:
+def works(springs, length, offset):
+    # logging.debug(' ' * offset + springs[offset:offset+length])
+    if '.' in springs[offset:offset+length]:
+        # logging.debug("bad 1")
         return False
 
-    for i, c in enumerate(contigs):
-        if c != lengths[i]:
+    # logging.debug("offset+length={}, len(springs)={}".format(length + offset, len(springs)))
+    if length + offset < len(springs):
+        if springs[offset+length] == '#':
+            # logging.debug("bad 2")
             return False
-    if incomplete_ok:
-        return True
-    return len(contigs) == len(lengths)
+    if offset > 0:
+        if springs[offset - 1] == '#':
+            # logging.debug("bad 3")
+            return False
+    # logging.debug("good 1")
+    return True
 
+@cache
 def count_arrangements(springs, lengths):
-    idx = springs.find('?')
-    if idx == -1:
-        if count_contiguous(springs, lengths):
-            # logging.debug("{} {} is a valid arrangement".format(springs, lengths))
-            return 1 # valid configuration
-        return 0 #invalid configuratioin
-    else:
-        prefix = springs[0:idx]
-        suffix = springs[idx + 1:]
-
-        if count_contiguous(prefix, lengths, incomplete_ok=True):
-            # Gotta stop short on early impossible arrangements.
-            return count_arrangements(prefix + '#' + suffix, lengths) + count_arrangements(prefix + '.' + suffix, lengths)
+    if len(lengths) == 0:
+        if '#' not in springs:
+            logging.debug("good1")
+            return 1
         else:
+            logging.debug("bad1")
             return 0
 
-# if not p.answered_a:
+    next_length = lengths[0]
+    arrangements = 0
+    for i in range(len(springs) - next_length + 1):
+        good_or_bad = 'good'
+        w = works(springs, next_length, i)
+        if not w:
+            good_or_bad = 'bad'
+        logging.debug('Checking len({}) {}: L {} at O {} "{}" is {}'.format(len(springs), springs, next_length, i, springs[i:i+next_length], good_or_bad))
+
+        if w:
+            if i + next_length == len(springs):
+                # it's at the end of the string
+                logging.debug("Good at the end")
+                arrangements += count_arrangements('', lengths[1:])
+            else:
+                arrangements += count_arrangements(springs[i + next_length + 1:], lengths[1:])
+        else:
+            # we can't just skip over a spring. If we have see one and it's bad, stop looking.
+            if '#' in springs[0:i]:
+                break
+    return arrangements
+
 total_arrangements = 0
+total_orig = 0
 for line in lines:
     springs, lengths = line.split(' ')
     lengths = [int(s) for s in lengths.split(',')]
-    arrangements = count_arrangements(springs, lengths)
-    logging.debug("{} {} -> {} arrangements".format(springs, lengths, arrangements))
+    arrangements = count_arrangements(springs, tuple(lengths))
+    logging.info("{} {} -> {} arrangements".format(springs, lengths, arrangements))
     total_arrangements += arrangements
 
 logging.info("Total arrangements: {}".format(total_arrangements))
@@ -90,9 +97,11 @@ for line in lines:
     lengths = [int(s) for s in lengths.split(',')]
     lengths = lengths * 5
 
-    logging.debug("Checking {} -> {} {}".format(line, springs, lengths))
-    arrangements = count_arrangements(springs, lengths)
-    logging.debug("{} -> {} {} -> {} arrangements".format(line, springs, lengths, arrangements))
+    # logging.debug("Checking {} -> {} {}".format(line, springs, lengths))
+    arrangements = count_arrangements(springs, tuple(lengths))
+    logging.info("{} -> {} {} -> {} arrangements".format(line, springs, lengths, arrangements))
+    # logging.info("works: {}".format(works.cache_info()))
+    # logging.info("count_arrangements: {}".format(count_arrangements.cache_info()))
     total_arrangements += arrangements
 
 logging.info("Total arrangements: {}".format(total_arrangements))
