@@ -32,7 +32,6 @@ def draw_map(m, mx, my, print_now=True, default_char='.'):
                 chars.append('#')
             else:
                 chars.append(default_char)
-            # chars.append(m.get((x, y), default_char))
         lines.append(''.join(chars))
         if print_now:
             print(lines[-1])
@@ -68,14 +67,14 @@ def trace(m, p, x, y, direction):
             n = follow_path(m, p, x, y, d)
             for nx, ny, nd in n:
                 if nd in p[(nx, ny)]:
-                    logging.info("We've already traced {} {},{}".format(nd, nx, ny))
+                    logging.debug("We've already traced {} {},{}".format(nd, nx, ny))
                 else:
                     nexts.append((nx, ny, nd))
             logging.debug("Found {} beams to follow".format(len(n)))
             # nexts += n
         currents = nexts
         num_added = len(p) - current_energized
-        logging.info("Energized {} more tiles ({} total). {} Beams".format(num_added, len(p), len(currents)))
+        logging.debug("Energized {} more tiles ({} total). {} Beams".format(num_added, len(p), len(currents)))
         current_energized = len(p)
 
 
@@ -161,3 +160,22 @@ logging.info("After tracing, {} tiles were energized".format(len(path)))
 draw_map(path, max_x-1, max_y-1)
 if not TEST:
     p.answer_a = len(path)
+
+# part 2
+max_trace = len(path)
+starting_locations =  [(i, 0,         SOUTH) for i in range(max_x)]
+starting_locations += [(i, max_y - 1, NORTH) for i in range(max_x)]
+starting_locations += [(0, i,          EAST) for i in range(max_y)]
+starting_locations += [(max_x - 1, i,  WEST) for i in range(max_y)]
+for (x, y, d) in starting_locations:
+    path = defaultdict(set)
+    logging.info("Checking {} {},{}".format(d, x, y))
+    trace(mirror_map, path, x, y, d)
+    current_trace = len(path)
+    if current_trace > max_trace:
+        logging.info("Found a new max: {}".format(current_trace))
+        max_trace = current_trace
+
+logging.info("Max trace: {}".format(max_trace))
+if not TEST:
+    p.answer_b = max_trace
