@@ -12,11 +12,11 @@ def rows_to_cols(rows):
         cols.append(''.join([r[i] for r in rows]))
     return cols
 
-def draw_map(m, mx, my, print_now=True, default_char='.'):
+def draw_map(m, max_x, max_y, min_x=0, min_y=0, print_now=True, default_char='.'):
     lines = []
-    for y in range(my+1):
+    for y in range(min_y, max_y+1, 1):
         chars = []
-        for x in range(mx+1):
+        for x in range(min_x, max_x+1, 1):
             chars.append(m.get((x, y), default_char))
         lines.append(''.join(chars))
         if print_now:
@@ -85,3 +85,49 @@ def get_overlap(a_start, a_end, b_start, b_end):
 
 def manhattan(x1, y1, x2, y2):
     return abs(x2 - x1) + abs(y2 - y1)
+
+
+def get_closest_tentative(unvisited, distances):
+    candidate = None
+    candidate_dist = -1
+    for k, v in distances.items():
+        if k in unvisited:
+            if candidate is None or v < candidate_dist:
+                candidate = k
+                candidate_dist = v
+    return candidate
+
+def dijkstra(grid):
+    tentatives = {}
+    unvisited_nodes = set()
+    rows = len(grid)
+    cols = len(grid[0])
+    for r in range(rows):
+        for c in range(cols):
+            unvisited_nodes.add((r,c))
+
+    current = (0,0)
+    tentatives[current] = 0
+    while unvisited_nodes:
+        r, c = current
+        for next_row, next_col in [(r-1,c), (r+1,c), (r,c-1), (r,c+1)]:
+            if next_row < 0 or next_row >= rows:
+                continue
+            if next_col < 0 or next_col >= cols:
+                continue
+            if next_col == c and next_row == r:
+                continue
+
+            neighbour = (next_row, next_col)
+            # logging.debug("from {},{} looking at neighbour {},{}".format(r, c, next_row, next_col))
+            if neighbour not in unvisited_nodes:
+                continue
+            neigh_distance = tentatives[current] + grid[next_row][next_col]
+            if neighbour not in tentatives or tentatives[neighbour] > neigh_distance:
+                tentatives[neighbour] = neigh_distance
+
+        unvisited_nodes.remove(current)
+        if current == (rows - 1, cols - 1):
+            break
+        current = get_closest_tentative(unvisited_nodes, tentatives)
+    return tentatives[current]
