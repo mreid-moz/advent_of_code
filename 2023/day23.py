@@ -1,71 +1,79 @@
 from aocd.models import Puzzle
 from collections import defaultdict
+from functools import cache
 import logging
 import re
 import sys
 
-logging.basicConfig(level=logging.DEBUG)
+sys.setrecursionlimit(50000)
+
+logging.basicConfig(level=logging.INFO)
 
 p = Puzzle(year=2023, day=23)
 
-TEST = True
+TEST = False
 if TEST:
     lines = p.examples[0].input_data.splitlines()
 else:
     lines = p.input_data.splitlines()
 
-def dijkstra(grid, start_row=0, start_col=0):
-    rows = len(grid)
-    cols = len(grid[0])
-    dist = {}
-    prev = {}
-    unvisited = set()
-    for r in range(rows):
-        for c in range(cols):
-            dist[(r, c)] = -1
-            if grid[r][c] != '#':
-                unvisited.add((r, c))
-    dist[(start_row,start_col)] = 0
+@cache
+def longest(grid, visited, start, target, ignore_slopes=False):
+    if start == target:
+        return 0
 
-    while unvisited:
-        furthest = None
-        max_dist = None
-        for u in unvisited:
-            if max_dist is None or dist[u] > max_dist:
-                max_dist = dist[u]
-                furthest = u
-        unvisited.remove(furthest)
+    r, c = start
+    visited = tuple([start] + list(visited))
+    # visited.add(start)
+    candidates = []
+    for next_row, next_col, next_dir in [(r-1, c, '^'), (r+1, c, 'v'), (r, c-1, '<'), (r, c+1, '>')]:
+        if next_row < 0 or next_row >= len(grid):
+            continue
+        if next_col < 0 or next_col >= len(grid[0]):
+            continue
 
-        logging.debug("Looking at {} (dist {})".format(furthest, max_dist))
+        if (next_row, next_col) in visited:
+            logging.debug("Already visited {},{}".format(next_row, next_col))
+            continue
 
-        r, c = furthest
-        for next_row, next_col, next_dir in [(r-1, c, '^'), (r+1, c, 'v'), (r, c-1, '<'), (r, c+1, '>')]:
-            if (next_row, next_col) not in unvisited:
-                # this also rules out invalid points and the point itself (since we removed it above)
-                # logging.debug("skipping {},{} wasn't in unvisited.".format(next_row, next_col))
-                continue
+        next_char = grid[next_row][next_col]
+        if next_char == '#':
+            continue
 
-            if grid[next_row][next_col] != '.' and grid[next_row][next_col] != next_dir:
-                logging.debug("Skipping {},{}, since it was {} and the slope was {}".format(next_row, next_col, next_dir, grid[next_row][next_col]))
-                continue
+        if not ignore_slopes and (next_char != '.' and next_char != next_dir):
+            logging.debug("Skipping {},{}, since it was {} and the slope was {}".format(next_row, next_col, next_dir, grid[next_row][next_col]))
+            continue
 
-            logging.debug("Looking from {},{} {} {},{}".format(r, c, next_dir, next_row, next_col))
-            next_dist = max_dist + 1
-            if next_dist > dist[(next_row, next_col)]:
-                logging.debug("Setting distance {},{} to {}".format(next_row, next_col, next_dist))
-                dist[(next_row, next_col)] = next_dist
-                prev[(next_row, next_col)] = furthest
-            else:
-                logging.debug("Already had a better distance for {},{} ({} > current {})".format(next_row, next_col, dist[(next_row, next_col)], next_dist))
-        logging.debug("{} remaining".format(len(unvisited)))
-    return dist, prev
+        logging.debug("Searching from {},{} -> {},{} next".format(next_row, next_col, *target))
+        candidate_length = longest(grid, visited, (next_row, next_col), target, ignore_slopes)
+        if candidate_length is not None:
+            candidates.append(candidate_length + 1)
+            logging.debug("Longest from {},{} -> {},{} was {}".format(next_row, next_col, *target, candidates[-1]))
+    if len(candidates) == 0:
+        logging.debug("Found {} potential paths from {},{}".format(len(candidates), r, c))
+        return None
+    return max(candidates)
 
+grid = tuple([tuple(line) for line in lines])
 
 start_col = lines[0].find('.')
-distances, paths = dijkstra(lines, 0, start_col)
+# distances, paths = dijkstra(lines, 0, start_col)
 end_col = lines[-1].find('.')
-longest_dist = distances[(len(lines)-1, end_col)]
-logging.info("Longest path from 0,{} to {},{}: {}".format(start_col, len(lines) - 1, end_col, longest_dist))
+# longest_dist = distances[(len(lines)-1, end_col)]
+
+# Part A
+longest_dist = longest(grid, tuple([]), (0, start_col), (len(grid)-1, end_col))
+logging.info("Longest path from 0,{} to {},{}: {}".format(start_col, len(grid) - 1, end_col, longest_dist))
+
+# draw_grid(grid, path)
 
 if not TEST:
     p.answer_a = longest_dist
+
+# Part B
+longest_dist = longest(grid, tuple([]), (0, start_col), (len(grid)-1, end_col), ignore_slopes=True)
+logging.info("Ignoring slopes, longest path from 0,{} to {},{}: {}".format(start_col, len(grid) - 1, end_col, longest_dist))
+
+
+if not TEST:
+    p.answer_b = longest_dist
