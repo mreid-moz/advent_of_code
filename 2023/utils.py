@@ -12,6 +12,14 @@ def rows_to_cols(rows):
         cols.append(''.join([r[i] for r in rows]))
     return cols
 
+def lines_to_map(lines, empty_char='.'):
+    m = {}
+    for y, line in enumerate(lines):
+        for x, c in enumerate(line):
+            if empty_char is not None and c != empty_char:
+                m[(x, y)] = c
+    return m, 0, len(lines[0])-1, 0, len(lines)-1
+
 def draw_map(m, max_x, max_y, min_x=0, min_y=0, print_now=True, default_char='.'):
     lines = []
     for y in range(min_y, max_y+1, 1):
@@ -22,6 +30,20 @@ def draw_map(m, max_x, max_y, min_x=0, min_y=0, print_now=True, default_char='.'
         if print_now:
             print(lines[-1])
     return lines
+
+def get_map_bounds(m):
+    min_x, max_x, min_y, max_y = (None, None, None, None)
+    for x, y in m.keys():
+        if min_x is None or x < min_x:
+            min_x = x
+        if min_y is None or y < min_y:
+            min_y = y
+
+        if max_x is None or x > max_x:
+            max_x = x
+        if max_y is None or y > max_y:
+            max_y = y
+    return (min_x, max_x, min_y, max_y)
 
 def coalesce(v, default_char):
     if v is None:
