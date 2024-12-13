@@ -9,39 +9,43 @@ logging.basicConfig(level=logging.DEBUG)
 
 p = Puzzle(year=2024, day=12)
 
-TEST = True
+TEST = False
 if TEST:
     lines = p.examples[0].input_data.splitlines()
 else:
     lines = p.input_data.splitlines()
 
-
 def flood(region_map, garden_map, x0, y0, x, y, max_x, max_y, level=0):
-    # if level % 100 == 0:
     logging.debug(f"Flood recursion level: {level}. originated at ({x0,y0}), currently looking at {x},{y}")
 
     if level > 8000:
         return
 
-
-    if (x0, y0) not in region_map:
-        region_map[(x0, y0)] = (0, 0)
-
     if (x, y) not in region_map:
         n_area = 1
         n_perimeter = 4
 
+        floods = []
+
         for nx, ny in neighbours(x, y, max_x, max_y, include_diagonals=False):
             logging.debug(f"Looking from {x},{y} to {nx},{ny}")
-            if (nx, ny) not in region_map and garden_map[(nx, ny)] == garden_map[(x, y)]:
+            if garden_map[(nx, ny)] == garden_map[(x, y)]:
                 n_perimeter -= 1
-                flood(region_map, garden_map, x0, y0, nx, ny, max_x, max_y, level + 1)
+                if (nx, ny) not in region_map:
+                    floods.append((nx, ny))
 
         logging.debug(f"For {x},{y}, area={n_area}, per={n_perimeter}")
-        area, perimeter = region_map[(x0, y0)]
-        area += n_area
-        perimeter += n_perimeter
-        region_map[(x0, y0)] = (area, perimeter)
+        if (x, y) == (x0, y0):
+            region_map[(x, y)] = (n_area, n_perimeter)
+        else:
+            area, perimeter = region_map[(x0, y0)]
+            area += n_area
+            perimeter += n_perimeter
+            region_map[(x, y)] = (-n_area, -n_perimeter)
+            region_map[(x0, y0)] = (area, perimeter)
+
+        for nx, ny in floods:
+            flood(region_map, garden_map, x0, y0, nx, ny, max_x, max_y, level + 1)
 
 
 max_x = len(lines[0]) - 1
