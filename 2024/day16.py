@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 p = Puzzle(year=2024, day=16)
 
-TEST = False
+TEST = True
 if TEST:
     lines = p.examples[0].input_data.splitlines()
 else:
@@ -61,7 +61,7 @@ def dijkstra(grid):
     current = (r, c)
     if grid[r][c] != 'S':
         logging.error(f"grid[{r},{c}] == {grid[r][c]} (expected S)")
-    tentatives[current] = '>'
+    tentatives[current] = ['>']
     while unvisited_nodes:
         r, c = current
         for next_row, next_col in [(r-1,c), (r+1,c), (r,c-1), (r,c+1)]:
@@ -76,19 +76,22 @@ def dijkstra(grid):
             # logging.debug("from {},{} looking at neighbour {},{}".format(r, c, next_row, next_col))
             if neighbour not in unvisited_nodes:
                 continue
-            new_path = tentatives[current] + next_dir
+            new_path = tentatives[current][0] + next_dir
 
             neigh_distance = path_score(new_path)
-            if neighbour not in tentatives or path_score(tentatives[neighbour]) > neigh_distance:
-                tentatives[neighbour] = new_path
+            curr_distance = path_score(tentatives[neighbour][0])
+            if neighbour not in tentatives or neigh_distance < curr_distance:
+                tentatives[neighbour] = [new_path]
+            elif neigh_distance == curr_distance:
+                tentatives[neighbour].append(new_path)
 
         unvisited_nodes.remove(current)
-        if grid[r][c] == 'E':
-            logging.debug(f"Found E at {current}")
-            # if current == (rows - 1, cols - 1):
-            break
+        # if grid[r][c] == 'E':
+        #     logging.debug(f"Found E at {current}")
+        #     # if current == (rows - 1, cols - 1):
+        #     break
         current = get_closest_tentative(unvisited_nodes, tentatives)
-    return tentatives[current]
+    return tentatives[(1,cols-2)]
 
 # for line in lines:
 #     logging.debug(line)
@@ -132,8 +135,32 @@ test_path = "S^^^>>^^>>>>>>>>vvvvvv>>^^^^^^^^^^^^E"
 logging.debug(f"Score for {test_path}: {path_score(test_path)}")
 
 shortest = dijkstra(lines)
-shortest_score = path_score(shortest)
-logging.info(f"Shortest path: {shortest} for score {shortest_score}")
+logging.info(f"Found {len(shortest)} shortest paths")
+
+def path_to_nodes(path, sr, sc):
+    nodes = set()
+    nodes.add((sr, sc))
+    cr, cc = (sr, sc)
+    for cn in path:
+        if cn == '>':
+            cc += 1
+        elif cn == '<':
+            cc -= 1
+        elif cn == '^':
+            cr -= 1
+        elif cn == 'v':
+            cr += 1
+        nodes.add((cr, cc))
+    return nodes
+
+all_nodes = set()
+num_rows = len(lines)
+num_cols = len(lines[0])
+for path in shortest:
+    logging.debug(f"One shortest path: {path}")
+    new_nodes = path_to_nodes(path, num_rows-2, 1)
+    logging.debug(f"Path includes: {new_nodes}")
+    all_nodes.update(new_nodes)
 
 if not TEST:
-    p.answer_a = shortest_score
+    p.answer_b = len(all_nodes)
